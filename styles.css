@@ -192,6 +192,42 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
 .badge-overdue { background: var(--high); color: #fff; }
 .badge-date { background: var(--surface-2); color: var(--text-soft); }
 
+/* ── Task images ─────────────────────────── */
+.task-imgs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.task-imgs img {
+  height: 72px;
+  max-width: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: zoom-in;
+}
+.img-hint { font-size: 0.82rem; color: var(--text-soft); margin: -4px 0 8px; }
+.linklike {
+  border: none; background: none; padding: 0;
+  color: var(--primary); font-weight: 600; font-size: 0.82rem;
+  cursor: pointer; text-decoration: underline;
+}
+.img-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.img-strip .thumb { position: relative; }
+.img-strip img {
+  height: 64px; max-width: 140px; object-fit: cover;
+  border-radius: 8px; border: 1px solid var(--border);
+}
+.img-strip .thumb-x {
+  position: absolute; top: -6px; right: -6px;
+  width: 20px; height: 20px; line-height: 1;
+  border-radius: 50%; border: none;
+  background: var(--high); color: #fff;
+  font-size: 11px; font-weight: 700; cursor: pointer;
+}
+#imgModal { cursor: zoom-out; }
+#imgModalImg {
+  max-width: 92vw; max-height: 90vh;
+  border-radius: 10px;
+  box-shadow: 0 12px 50px rgba(0,0,0,0.5);
+}
+
 .push-ms { align-self: center; white-space: nowrap; }
 @media (max-width: 640px) {
   .push-ms { font-size: 0.72rem; padding: 4px 8px; }

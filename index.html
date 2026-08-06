@@ -146,6 +146,11 @@
       <label>Description <span class="muted">(optional)</span>
         <textarea id="taskNotes" rows="3" placeholder="Details, links, context, that message you need to remember…"></textarea>
       </label>
+      <div class="img-hint">📸 Paste a screenshot anywhere in this form (Ctrl+V) or
+        <button type="button" class="linklike" id="taskAttach">attach an image</button>
+      </div>
+      <input type="file" id="taskAttachFile" accept="image/*" multiple hidden>
+      <div id="taskImages" class="img-strip"></div>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" id="taskCancel">Cancel</button>
         <button type="button" class="btn btn-danger" id="taskDelete" hidden>Delete</button>
@@ -287,6 +292,11 @@
       <button type="button" class="btn btn-primary" id="timerStart">Start Focus</button>
     </div>
   </div>
+</div>
+
+<!-- ══════════ IMAGE LIGHTBOX ══════════ -->
+<div class="modal-backdrop" id="imgModal" hidden>
+  <img id="imgModalImg" alt="Attached screenshot — click to close">
 </div>
 
 <!-- ══════════ FLOATING TIMER BAR ══════════ -->

@@ -136,7 +136,11 @@ function seedIfNeeded() {
 }
 
 function save() {
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch (e) {
+    alert("Browser storage is full — probably too many attached images. Remove some images (or delete old completed tasks) and try again.");
+  }
 }
 
 function uid() {
@@ -250,6 +254,7 @@ function taskCardHTML(t, opts = {}) {
         ${done && opts.showCompletedDate ? `<span class="badge badge-date">✅ Done ${esc(friendlyDate(t.completedAt.slice(0, 10)))}</span>` : ""}
       </div>
       ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ""}
+      ${(t.images || []).length ? `<div class="task-imgs">${t.images.map(src => `<img class="task-img" src="${src}" alt="attached screenshot">`).join("")}</div>` : ""}
     </div>
     ${opts.pushMilestone ? `<button class="btn btn-ghost btn-small push-ms" data-action="push-milestone" data-id="${t.id}" title="Add this to Milestones">🌟 Push to Milestones</button>` : ""}
     ${done ? "" : `<button class="task-edit" data-action="start-timer" data-title="${esc(t.title)}" title="Start focus timer">⏱️</button>`}
@@ -872,6 +877,39 @@ function getPriorityPicker(pickerId) {
   return sel ? sel.dataset.value : "medium";
 }
 
+/* ── task images (pasted screenshots) ────── */
+let modalImages = []; // working copy while the task modal is open
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1280;
+      const scale = Math.min(1, MAX / img.width, MAX / img.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(img.src);
+      resolve(canvas.toDataURL("image/jpeg", 0.78));
+    };
+    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error("bad image")); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function addModalImages(files) {
+  for (const f of files) {
+    try { modalImages.push(await compressImage(f)); } catch { /* skip non-images */ }
+  }
+  renderModalImages();
+}
+
+function renderModalImages() {
+  document.getElementById("taskImages").innerHTML = modalImages.map((src, i) => `
+    <div class="thumb"><img src="${src}" alt="attached"><button type="button" class="thumb-x" data-i="${i}" title="Remove">✕</button></div>`).join("");
+}
+
 function openTaskModal(task, prefillDate) {
   document.getElementById("taskModalTitle").textContent = task ? "Edit Task" : "Add Task";
   document.getElementById("taskId").value = task ? task.id : "";
@@ -880,6 +918,8 @@ function openTaskModal(task, prefillDate) {
   document.getElementById("taskTime").value = task ? (task.time || "") : "";
   document.getElementById("taskNotes").value = task ? (task.notes || "") : "";
   setPriorityPicker("taskPriority", task ? task.priority : "high");
+  modalImages = task && task.images ? task.images.slice() : [];
+  renderModalImages();
   document.getElementById("taskDelete").hidden = !task;
   document.getElementById("taskModal").hidden = false;
   document.getElementById("taskTitle").focus();
@@ -943,7 +983,7 @@ function openCalModal() {
 }
 
 function closeModals() {
-  ["taskModal", "recModal", "dayModal", "msModal", "calModal", "timerModal"].forEach(id =>
+  ["taskModal", "recModal", "dayModal", "msModal", "calModal", "timerModal", "imgModal"].forEach(id =>
     document.getElementById(id).hidden = true);
 }
 
@@ -1041,6 +1081,39 @@ document.getElementById("recWeekdays").addEventListener("click", e => {
 
 document.getElementById("recFreq").addEventListener("change", updateRecFreqUI);
 
+// task images: paste anywhere in the task form, attach button, remove, lightbox
+document.getElementById("taskModal").addEventListener("paste", e => {
+  const files = [...(e.clipboardData ? e.clipboardData.items : [])]
+    .filter(i => i.type.startsWith("image/"))
+    .map(i => i.getAsFile())
+    .filter(Boolean);
+  if (!files.length) return;
+  e.preventDefault();
+  addModalImages(files);
+});
+document.getElementById("taskAttach").addEventListener("click", () => document.getElementById("taskAttachFile").click());
+document.getElementById("taskAttachFile").addEventListener("change", e => {
+  addModalImages([...e.target.files]);
+  e.target.value = "";
+});
+document.getElementById("taskImages").addEventListener("click", e => {
+  const x = e.target.closest(".thumb-x");
+  if (x) {
+    modalImages.splice(+x.dataset.i, 1);
+    renderModalImages();
+  }
+});
+document.body.addEventListener("click", e => {
+  const img = e.target.closest(".task-img");
+  if (img) {
+    document.getElementById("imgModalImg").src = img.src;
+    document.getElementById("imgModal").hidden = false;
+  }
+});
+document.getElementById("imgModal").addEventListener("click", () => {
+  document.getElementById("imgModal").hidden = true;
+});
+
 // task form
 document.getElementById("btnAddTask").addEventListener("click", () => openTaskModal(null));
 document.getElementById("taskCancel").addEventListener("click", closeModals);
@@ -1053,6 +1126,7 @@ document.getElementById("taskForm").addEventListener("submit", e => {
     due: document.getElementById("taskDue").value,
     time: document.getElementById("taskTime").value,
     notes: document.getElementById("taskNotes").value.trim(),
+    images: modalImages.slice(),
   };
   if (!data.title || !data.due) return;
   if (id) {
