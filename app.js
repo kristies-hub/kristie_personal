@@ -84,6 +84,7 @@ function load() {
         recurring: data.recurring || [],
         recurringDone: data.recurringDone || {},
         milestones: data.milestones || [],
+        notes: data.notes || [],
         icsUrl: data.icsUrl || "",
         seeded: !!data.seeded,
         seededV2: !!data.seededV2,
@@ -92,8 +93,11 @@ function load() {
       };
     }
   } catch (e) { /* fall through to fresh state */ }
-  return { tasks: [], recurring: [], recurringDone: {}, milestones: [], icsUrl: "", seeded: false, seededV2: false, seededV3: false, dedupedV1: false };
+  return { tasks: [], recurring: [], recurringDone: {}, milestones: [], notes: [], icsUrl: "", seeded: false, seededV2: false, seededV3: false, dedupedV1: false };
 }
+
+const NOTE_CATEGORIES = ["TC", "Acq", "Dispo", "1:1s", "General"];
+function catSlug(c) { return "cat-" + c.toLowerCase().replace(/[^a-z0-9]/g, ""); }
 
 /* Fuzzy title key so "Update Peter's sheet" and "Update Peter sheet" (or
    "Social media post(s)") count as the same task: lowercase, strip
@@ -270,6 +274,7 @@ function renderAll() {
   renderCalendar();
   renderAllTasks();
   renderRecurring();
+  renderNotes();
   renderMilestones();
   renderDone();
 }
@@ -393,6 +398,35 @@ function renderUpcoming() {
       html += `<div class="group-header">${esc(friendlyDate(t.due))} — ${esc(strToDate(t.due).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }))}</div>`;
     }
     html += taskCardHTML(t);
+  }
+  el.innerHTML = html;
+}
+
+/* ── NOTES view ──────────────────────────── */
+function renderNotes() {
+  const el = document.getElementById("notesList");
+  const notes = state.notes || [];
+  let html = "";
+  for (const cat of NOTE_CATEGORIES) {
+    const group = notes.filter(n => (n.category || "General") === cat)
+      .sort((a, b) => ((b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)) || ((a.updatedAt || "") < (b.updatedAt || "") ? 1 : -1));
+    html += `<div class="group-header">${esc(cat)} (${group.length})</div>`;
+    if (!group.length) {
+      html += `<p class="note-empty">Nothing here yet.</p>`;
+      continue;
+    }
+    html += group.map(n => `
+      <div class="note-card ${catSlug(n.category || "General")} ${n.pinned ? "pinned" : ""}">
+        <div class="note-body">
+          ${n.title ? `<div class="note-title">${esc(n.title)}</div>` : ""}
+          ${n.body ? `<div class="note-text">${esc(n.body)}</div>` : ""}
+          ${(n.images || []).length ? `<div class="task-imgs">${n.images.map(src => `<img class="task-img" src="${src}" alt="attached screenshot">`).join("")}</div>` : ""}
+          <div class="note-meta"><span class="badge ${catSlug(n.category || "General")}">${esc(n.category || "General")}</span>
+            ${n.updatedAt ? " updated " + esc(friendlyDate(n.updatedAt.slice(0, 10))) : ""}</div>
+        </div>
+        <button class="pin-btn ${n.pinned ? "pinned" : ""}" data-action="pin-note" data-id="${n.id}" title="${n.pinned ? "Unpin" : "Pin to top"}">📌</button>
+        <button class="task-edit" data-action="edit-note" data-id="${n.id}" title="Edit">✏️</button>
+      </div>`).join("");
   }
   el.innerHTML = html;
 }
@@ -935,17 +969,24 @@ function compressImage(file) {
   });
 }
 
-async function addModalImages(files) {
+async function addImagesTo(files, arr, render) {
   for (const f of files) {
-    try { modalImages.push(await compressImage(f)); } catch { /* skip non-images */ }
+    try { arr.push(await compressImage(f)); } catch { /* skip non-images */ }
   }
-  renderModalImages();
+  render();
 }
 
-function renderModalImages() {
-  document.getElementById("taskImages").innerHTML = modalImages.map((src, i) => `
+function addModalImages(files) { return addImagesTo(files, modalImages, renderModalImages); }
+
+function renderImageStrip(elId, arr) {
+  document.getElementById(elId).innerHTML = arr.map((src, i) => `
     <div class="thumb"><img src="${src}" alt="attached"><button type="button" class="thumb-x" data-i="${i}" title="Remove">✕</button></div>`).join("");
 }
+
+function renderModalImages() { renderImageStrip("taskImages", modalImages); }
+
+let noteImages = []; // working copy while the note modal is open
+function renderNoteImages() { renderImageStrip("noteImages", noteImages); }
 
 function openTaskModal(task, prefillDate) {
   document.getElementById("taskModalTitle").textContent = task ? "Edit Task" : "Add Task";
@@ -1013,6 +1054,20 @@ function openMilestoneModal(m, prefill) {
   document.getElementById("msTitle").focus();
 }
 
+function openNoteModal(n, prefillCat) {
+  document.getElementById("noteModalTitle").textContent = n ? "Edit Note" : "Add Note";
+  document.getElementById("noteId").value = n ? n.id : "";
+  document.getElementById("noteTitle").value = n ? (n.title || "") : "";
+  document.getElementById("noteBody").value = n ? (n.body || "") : "";
+  const cat = n ? (n.category || "General") : (prefillCat || "General");
+  document.querySelectorAll("#noteCat .cat-btn").forEach(b => b.classList.toggle("selected", b.dataset.value === cat));
+  noteImages = n && n.images ? n.images.slice() : [];
+  renderNoteImages();
+  document.getElementById("noteDelete").hidden = !n;
+  document.getElementById("noteModal").hidden = false;
+  document.getElementById("noteTitle").focus();
+}
+
 function openCalModal() {
   document.getElementById("calUrl").value = state.icsUrl || "";
   document.getElementById("calDisconnect").hidden = !state.icsUrl;
@@ -1020,7 +1075,7 @@ function openCalModal() {
 }
 
 function closeModals() {
-  ["taskModal", "recModal", "dayModal", "msModal", "calModal", "timerModal", "imgModal"].forEach(id =>
+  ["taskModal", "recModal", "dayModal", "msModal", "calModal", "timerModal", "imgModal", "noteModal"].forEach(id =>
     document.getElementById(id).hidden = true);
 }
 
@@ -1084,6 +1139,14 @@ document.body.addEventListener("click", e => {
         notes: t.notes || "",
       });
     }
+  }
+  if (action === "edit-note") {
+    closeModals();
+    openNoteModal(state.notes.find(x => x.id === el.dataset.id));
+  }
+  if (action === "pin-note") {
+    const n = state.notes.find(x => x.id === el.dataset.id);
+    if (n) { n.pinned = !n.pinned; save(); renderNotes(); }
   }
   if (action === "connect-cal") openCalModal();
   if (action === "refresh-cal") fetchMeetings(true);
@@ -1224,6 +1287,58 @@ document.getElementById("recDelete").addEventListener("click", () => {
   }
 });
 
+// note form
+document.getElementById("btnAddNote").addEventListener("click", () => openNoteModal(null));
+document.getElementById("noteCancel").addEventListener("click", closeModals);
+document.getElementById("noteCat").addEventListener("click", e => {
+  const btn = e.target.closest(".cat-btn");
+  if (btn) document.querySelectorAll("#noteCat .cat-btn").forEach(b => b.classList.toggle("selected", b === btn));
+});
+document.getElementById("noteModal").addEventListener("paste", e => {
+  const files = [...(e.clipboardData ? e.clipboardData.items : [])]
+    .filter(i => i.type.startsWith("image/"))
+    .map(i => i.getAsFile())
+    .filter(Boolean);
+  if (!files.length) return;
+  e.preventDefault();
+  addImagesTo(files, noteImages, renderNoteImages);
+});
+document.getElementById("noteAttach").addEventListener("click", () => document.getElementById("noteAttachFile").click());
+document.getElementById("noteAttachFile").addEventListener("change", e => {
+  addImagesTo([...e.target.files], noteImages, renderNoteImages);
+  e.target.value = "";
+});
+document.getElementById("noteImages").addEventListener("click", e => {
+  const x = e.target.closest(".thumb-x");
+  if (x) {
+    noteImages.splice(+x.dataset.i, 1);
+    renderNoteImages();
+  }
+});
+document.getElementById("noteForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const id = document.getElementById("noteId").value;
+  const sel = document.querySelector("#noteCat .cat-btn.selected");
+  const data = {
+    title: document.getElementById("noteTitle").value.trim(),
+    body: document.getElementById("noteBody").value.trim(),
+    category: sel ? sel.dataset.value : "General",
+    images: noteImages.slice(),
+    updatedAt: new Date().toISOString(),
+  };
+  if (!data.title && !data.body && !data.images.length) return;
+  if (id) Object.assign(state.notes.find(x => x.id === id), data);
+  else state.notes.push({ id: uid(), pinned: false, createdAt: new Date().toISOString(), ...data });
+  save(); closeModals(); renderNotes();
+});
+document.getElementById("noteDelete").addEventListener("click", () => {
+  const id = document.getElementById("noteId").value;
+  if (id && confirm("Delete this note?")) {
+    state.notes = state.notes.filter(n => n.id !== id);
+    save(); closeModals(); renderNotes();
+  }
+});
+
 // milestone form
 document.getElementById("btnAddMilestone").addEventListener("click", () => openMilestoneModal(null));
 document.getElementById("msCancel").addEventListener("click", closeModals);
@@ -1333,7 +1448,7 @@ document.getElementById("importFile").addEventListener("change", e => {
       if (confirm("Import this backup? It will replace your current tasks.")) {
         state = {
           tasks: data.tasks, recurring: data.recurring, recurringDone: data.recurringDone || {},
-          milestones: data.milestones || [], icsUrl: data.icsUrl || "",
+          milestones: data.milestones || [], notes: data.notes || [], icsUrl: data.icsUrl || "",
           seeded: true, seededV2: true, seededV3: true, dedupedV1: true,
         };
         save(); renderAll(); fetchMeetings(true);

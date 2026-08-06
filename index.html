@@ -21,6 +21,7 @@
       <button class="tab" data-view="calendar">📅 Calendar</button>
       <button class="tab" data-view="all">🗂️ All Tasks</button>
       <button class="tab" data-view="recurring">🔁 Recurring</button>
+      <button class="tab" data-view="notes">🗒️ Notes</button>
       <button class="tab" data-view="milestones">🌟 Milestones</button>
       <button class="tab" data-view="done">🏆 Completed</button>
     </nav>
@@ -88,6 +89,15 @@
       <button class="btn btn-primary" id="btnAddRecurring">+ Add Recurring Task</button>
     </div>
     <div id="recurringList"></div>
+  </section>
+
+  <!-- ══════════ NOTES VIEW ══════════ -->
+  <section id="view-notes" class="view">
+    <div class="view-header">
+      <h2>Notes 🗒️</h2>
+      <button class="btn btn-primary" id="btnAddNote">+ Add Note</button>
+    </div>
+    <div id="notesList"></div>
   </section>
 
   <!-- ══════════ MILESTONES VIEW ══════════ -->
@@ -291,6 +301,41 @@
       <button type="button" class="btn btn-ghost" id="timerCancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="timerStart">Start Focus</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════ NOTE MODAL ══════════ -->
+<div class="modal-backdrop" id="noteModal" hidden>
+  <div class="modal">
+    <h3 id="noteModalTitle">Add Note</h3>
+    <form id="noteForm">
+      <input type="hidden" id="noteId">
+      <label>Section
+        <div class="priority-picker" id="noteCat">
+          <button type="button" class="pri-btn cat-btn" data-value="TC">TC</button>
+          <button type="button" class="pri-btn cat-btn" data-value="Acq">Acq</button>
+          <button type="button" class="pri-btn cat-btn" data-value="Dispo">Dispo</button>
+          <button type="button" class="pri-btn cat-btn" data-value="1:1s">1:1s</button>
+          <button type="button" class="pri-btn cat-btn" data-value="General">General</button>
+        </div>
+      </label>
+      <label>Title <span class="muted">(optional)</span>
+        <input type="text" id="noteTitle" placeholder="e.g., Xander's pricing rule" autocomplete="off">
+      </label>
+      <label>Note
+        <textarea id="noteBody" rows="4" placeholder="The thing you need to remember…"></textarea>
+      </label>
+      <div class="img-hint">📸 Paste a screenshot anywhere in this form (Ctrl+V) or
+        <button type="button" class="linklike" id="noteAttach">attach an image</button>
+      </div>
+      <input type="file" id="noteAttachFile" accept="image/*" multiple hidden>
+      <div id="noteImages" class="img-strip"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="noteCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="noteDelete" hidden>Delete</button>
+        <button type="submit" class="btn btn-primary">Save Note</button>
+      </div>
+    </form>
   </div>
 </div>
 
