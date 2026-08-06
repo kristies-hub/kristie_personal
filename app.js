@@ -360,8 +360,8 @@ function renderToday() {
   if (dueTodayHigh.length) {
     sections.push(sectionHTML("🔴 Urgent — due today", dueTodayHigh.map(t => taskCardHTML(t)).join(""), dueTodayHigh.length));
   }
-  if (recsToday.length) {
-    sections.push(sectionHTML("🔁 Today's recurring tasks", recsToday.map(r => recCardHTML(r, today)).join(""), recsToday.length));
+  if (recsNotDone.length) {
+    sections.push(sectionHTML("🔁 Today's recurring tasks", recsNotDone.map(r => recCardHTML(r, today)).join(""), recsNotDone.length));
   }
   if (dueTodayMed.length) {
     sections.push(sectionHTML("🟡 Medium — due today", dueTodayMed.map(t => taskCardHTML(t)).join(""), dueTodayMed.length));
