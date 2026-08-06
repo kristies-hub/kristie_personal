@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kristie's Task Planner</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✅</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-icon">✅</span>
+      <span class="brand-name">Kristie's Task Planner</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="today">☀️ Today</button>
+      <button class="tab" data-view="calendar">📅 Calendar</button>
+      <button class="tab" data-view="all">🗂️ All Tasks</button>
+      <button class="tab" data-view="recurring">🔁 Recurring</button>
+      <button class="tab" data-view="done">🏆 Completed</button>
+    </nav>
+    <div class="topbar-actions">
+      <button class="btn btn-primary" id="btnAddTask">+ Add Task</button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ══════════ TODAY VIEW ══════════ -->
+  <section id="view-today" class="view active">
+    <div class="today-header">
+      <h1 id="todayGreeting">Good morning, Kristie!</h1>
+      <p class="today-date" id="todayDate"></p>
+    </div>
+    <div id="urgentBanner"></div>
+    <div id="todaySections"></div>
+  </section>
+
+  <!-- ══════════ CALENDAR VIEW ══════════ -->
+  <section id="view-calendar" class="view">
+    <div class="cal-toolbar">
+      <button class="btn btn-ghost" id="calPrev">‹</button>
+      <h2 id="calTitle"></h2>
+      <button class="btn btn-ghost" id="calNext">›</button>
+      <button class="btn btn-ghost btn-small" id="calToday">Today</button>
+    </div>
+    <div class="cal-legend">
+      <span class="legend-item"><span class="dot dot-high"></span> Urgent / High</span>
+      <span class="legend-item"><span class="dot dot-medium"></span> Medium</span>
+      <span class="legend-item"><span class="dot dot-low"></span> Low</span>
+      <span class="legend-item"><span class="dot dot-recurring"></span> Recurring</span>
+    </div>
+    <div class="cal-grid cal-head">
+      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </section>
+
+  <!-- ══════════ ALL TASKS VIEW ══════════ -->
+  <section id="view-all" class="view">
+    <div class="view-header">
+      <h2>All Open Tasks</h2>
+      <p class="muted">Everything on your plate, grouped by priority. Urgent first — always.</p>
+    </div>
+    <div id="allTasksList"></div>
+  </section>
+
+  <!-- ══════════ RECURRING VIEW ══════════ -->
+  <section id="view-recurring" class="view">
+    <div class="view-header">
+      <h2>Recurring Tasks</h2>
+      <p class="muted">Repetitive tasks that show up automatically on your Today page — like "Update Peter's sheet" every Thursday.</p>
+      <button class="btn btn-primary" id="btnAddRecurring">+ Add Recurring Task</button>
+    </div>
+    <div id="recurringList"></div>
+  </section>
+
+  <!-- ══════════ COMPLETED VIEW ══════════ -->
+  <section id="view-done" class="view">
+    <div class="view-header">
+      <h2>Completed Tasks 🎉</h2>
+      <div class="stats-row" id="doneStats"></div>
+    </div>
+    <div id="doneList"></div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span class="muted">Data is saved in this browser automatically.</span>
+    <span class="footer-actions">
+      <button class="btn btn-ghost btn-small" id="btnExport">⬇ Export backup</button>
+      <button class="btn btn-ghost btn-small" id="btnImport">⬆ Import backup</button>
+      <input type="file" id="importFile" accept=".json" hidden>
+    </span>
+  </div>
+</footer>
+
+<!-- ══════════ ADD/EDIT TASK MODAL ══════════ -->
+<div class="modal-backdrop" id="taskModal" hidden>
+  <div class="modal">
+    <h3 id="taskModalTitle">Add Task</h3>
+    <form id="taskForm">
+      <input type="hidden" id="taskId">
+      <label>What needs to be done?
+        <input type="text" id="taskTitle" required placeholder="e.g., Send invoice to client" autocomplete="off">
+      </label>
+      <label>Priority
+        <div class="priority-picker" id="taskPriority">
+          <button type="button" class="pri-btn pri-high" data-value="high">🔴 Urgent / High</button>
+          <button type="button" class="pri-btn pri-medium" data-value="medium">🟡 Medium</button>
+          <button type="button" class="pri-btn pri-low" data-value="low">🟢 Low</button>
+        </div>
+      </label>
+      <label>Due date
+        <input type="date" id="taskDue" required>
+      </label>
+      <label>Notes <span class="muted">(optional)</span>
+        <textarea id="taskNotes" rows="2" placeholder="Any details…"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="taskCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="taskDelete" hidden>Delete</button>
+        <button type="submit" class="btn btn-primary" id="taskSave">Save Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════ ADD/EDIT RECURRING MODAL ══════════ -->
+<div class="modal-backdrop" id="recModal" hidden>
+  <div class="modal">
+    <h3 id="recModalTitle">Add Recurring Task</h3>
+    <form id="recForm">
+      <input type="hidden" id="recId">
+      <label>Task
+        <input type="text" id="recTitle" required placeholder="e.g., Update Peter's sheet" autocomplete="off">
+      </label>
+      <label>Priority
+        <div class="priority-picker" id="recPriority">
+          <button type="button" class="pri-btn pri-high" data-value="high">🔴 Urgent / High</button>
+          <button type="button" class="pri-btn pri-medium" data-value="medium">🟡 Medium</button>
+          <button type="button" class="pri-btn pri-low" data-value="low">🟢 Low</button>
+        </div>
+      </label>
+      <label>Repeats
+        <select id="recFreq">
+          <option value="weekly">Weekly — on the day(s) I pick</option>
+          <option value="daily">Every day</option>
+          <option value="monthly">Monthly — on a day of the month</option>
+        </select>
+      </label>
+      <div id="recWeekdaysWrap">
+        <label>On these days
+          <div class="weekday-picker" id="recWeekdays">
+            <button type="button" data-day="0">Sun</button>
+            <button type="button" data-day="1">Mon</button>
+            <button type="button" data-day="2">Tue</button>
+            <button type="button" data-day="3">Wed</button>
+            <button type="button" data-day="4">Thu</button>
+            <button type="button" data-day="5">Fri</button>
+            <button type="button" data-day="6">Sat</button>
+          </div>
+        </label>
+      </div>
+      <div id="recMonthdayWrap" hidden>
+        <label>Day of the month
+          <input type="number" id="recMonthday" min="1" max="31" value="1">
+        </label>
+      </div>
+      <label>Notes <span class="muted">(optional)</span>
+        <textarea id="recNotes" rows="2" placeholder="Any details…"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="recCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="recDelete" hidden>Delete</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════ DAY DETAIL MODAL (from calendar) ══════════ -->
+<div class="modal-backdrop" id="dayModal" hidden>
+  <div class="modal">
+    <h3 id="dayModalTitle"></h3>
+    <div id="dayModalBody"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="dayClose">Close</button>
+      <button type="button" class="btn btn-primary" id="dayAddTask">+ Add task on this day</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
