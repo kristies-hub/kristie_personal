@@ -192,6 +192,11 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
 .badge-overdue { background: var(--high); color: #fff; }
 .badge-date { background: var(--surface-2); color: var(--text-soft); }
 
+.push-ms { align-self: center; white-space: nowrap; }
+@media (max-width: 640px) {
+  .push-ms { font-size: 0.72rem; padding: 4px 8px; }
+}
+
 .task-edit {
   border: none;
   background: transparent;

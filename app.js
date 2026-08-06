@@ -251,6 +251,7 @@ function taskCardHTML(t, opts = {}) {
       </div>
       ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ""}
     </div>
+    ${opts.pushMilestone ? `<button class="btn btn-ghost btn-small push-ms" data-action="push-milestone" data-id="${t.id}" title="Add this to Milestones">🌟 Push to Milestones</button>` : ""}
     ${done ? "" : `<button class="task-edit" data-action="start-timer" data-title="${esc(t.title)}" title="Start focus timer">⏱️</button>`}
     <button class="task-edit" data-action="edit-task" data-id="${t.id}" title="Edit">✏️</button>
   </div>`;
@@ -502,7 +503,7 @@ function renderDone() {
       lastDate = e.date;
       html += `<div class="group-header">${esc(friendlyDate(e.date))} — ${esc(strToDate(e.date).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" }))}</div>`;
     }
-    html += e.type === "task" ? taskCardHTML(e.t, { showCompletedDate: false }) : recCardHTML(e.rec, e.date);
+    html += e.type === "task" ? taskCardHTML(e.t, { pushMilestone: true }) : recCardHTML(e.rec, e.date);
   }
   el.innerHTML = html;
 }
@@ -924,12 +925,12 @@ function openDayModal(dateStr) {
   document.getElementById("dayModal").hidden = false;
 }
 
-function openMilestoneModal(m) {
-  document.getElementById("msModalTitle").textContent = m ? "Edit Milestone" : "Add Milestone";
+function openMilestoneModal(m, prefill) {
+  document.getElementById("msModalTitle").textContent = m ? "Edit Milestone" : (prefill ? "Push to Milestones 🌟" : "Add Milestone");
   document.getElementById("msId").value = m ? m.id : "";
-  document.getElementById("msTitle").value = m ? m.title : "";
-  document.getElementById("msDate").value = m ? m.date : todayStr();
-  document.getElementById("msNotes").value = m ? (m.notes || "") : "";
+  document.getElementById("msTitle").value = m ? m.title : (prefill ? prefill.title : "");
+  document.getElementById("msDate").value = m ? m.date : (prefill && prefill.date ? prefill.date : todayStr());
+  document.getElementById("msNotes").value = m ? (m.notes || "") : (prefill ? prefill.notes : "");
   document.getElementById("msDelete").hidden = !m;
   document.getElementById("msModal").hidden = false;
   document.getElementById("msTitle").focus();
@@ -995,6 +996,17 @@ document.body.addEventListener("click", e => {
   if (action === "edit-milestone") {
     closeModals();
     openMilestoneModal(state.milestones.find(x => x.id === el.dataset.id));
+  }
+  if (action === "push-milestone") {
+    const t = state.tasks.find(x => x.id === el.dataset.id);
+    if (t) {
+      closeModals();
+      openMilestoneModal(null, {
+        title: t.title,
+        date: t.completedAt ? t.completedAt.slice(0, 10) : todayStr(),
+        notes: t.notes || "",
+      });
+    }
   }
   if (action === "connect-cal") openCalModal();
   if (action === "refresh-cal") fetchMeetings(true);
