@@ -10,7 +10,26 @@ const PRIORITY_LABEL = { high: "🔴 Urgent", medium: "🟡 Medium", low: "🟢 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+/* Tasks pre-loaded for Kristie on first open (deduped by title, so
+   deleting one won't bring it back). */
+const SEED_TASKS = [
+  { title: "Edit the marketing sheet", priority: "high", due: "2026-08-06", notes: "" },
+  { title: "TC - rerunning CI assessments against the workbook", priority: "high", due: "2026-08-06",
+    notes: "I guess we have our bet - if confident, are you okay with moving forward with one of them? we have other one who persistently follows-up her application, just takes time to interview again - - \"im totally good if you are\"" },
+  { title: "Create sequences for leads who only have emails but don't have phone numbers", priority: "high", due: "2026-08-06", notes: "" },
+  { title: "Edit the referral handoff script", priority: "medium", due: "2026-08-07", notes: "" },
+  { title: "Add 'go for no' in the handbook", priority: "medium", due: "2026-08-07", notes: "" },
+  { title: "Build a project to predict what caused the dip of leads from the history of the previous weeks", priority: "high", due: "2026-08-14", notes: "" },
+  { title: "Create a website/zap to bypass the automation of Bloom KPIs to RD scorecard", priority: "medium", due: "2026-08-10", notes: "Placeholder due date — edit me!" },
+  { title: "Edit dispo listing generator", priority: "medium", due: "2026-08-10", notes: "Placeholder due date — edit me!" },
+  { title: "Add offer prompts in Yoodli", priority: "medium", due: "2026-08-10", notes: "Placeholder due date — edit me!" },
+  { title: "Add the open house strategy in dispo handbook", priority: "medium", due: "2026-08-10", notes: "Placeholder due date — edit me!" },
+  { title: "Emails announcing the fund", priority: "medium", due: "2026-08-10",
+    notes: "One email for the existing private lenders + potential private lenders (create the lists first), and a separate one for the turnkey investors list. Placeholder due date — edit me!" },
+];
+
 let state = load();
+seedIfNeeded();
 let calCursor = startOfMonth(new Date()); // month shown in calendar view
 let selectedDay = null;                    // date string for day modal / prefilled add
 
@@ -24,10 +43,23 @@ function load() {
         tasks: data.tasks || [],
         recurring: data.recurring || [],
         recurringDone: data.recurringDone || {},
+        seeded: !!data.seeded,
       };
     }
   } catch (e) { /* fall through to fresh state */ }
-  return { tasks: [], recurring: [], recurringDone: {} };
+  return { tasks: [], recurring: [], recurringDone: {}, seeded: false };
+}
+
+function seedIfNeeded() {
+  if (state.seeded) return;
+  const existing = new Set(state.tasks.map(t => t.title.trim().toLowerCase()));
+  SEED_TASKS.forEach(s => {
+    if (!existing.has(s.title.trim().toLowerCase())) {
+      state.tasks.push({ id: uid(), time: "", ...s, createdAt: new Date().toISOString(), completedAt: null });
+    }
+  });
+  state.seeded = true;
+  save();
 }
 
 function save() {
@@ -99,11 +131,19 @@ function esc(s) {
 function openTasks() { return state.tasks.filter(t => !t.completedAt); }
 
 function sortTasks(list) {
-  return list.slice().sort((a, b) =>
-    (a.due < b.due ? -1 : a.due > b.due ? 1 : 0) ||
-    (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]) ||
-    a.title.localeCompare(b.title)
-  );
+  return list.slice().sort((a, b) => {
+    const ta = a.time || "99:99", tb = b.time || "99:99"; // timed tasks first, in hour order
+    return (a.due < b.due ? -1 : a.due > b.due ? 1 : 0) ||
+      (PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]) ||
+      (ta < tb ? -1 : ta > tb ? 1 : 0) ||
+      a.title.localeCompare(b.title);
+  });
+}
+
+function formatTime(t) {
+  const [h, m] = t.split(":").map(Number);
+  const h12 = h % 12 || 12;
+  return h12 + ":" + String(m).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
 }
 
 /* ═══════════════════════════════════════════
@@ -131,6 +171,7 @@ function taskCardHTML(t, opts = {}) {
         <span class="badge badge-${t.priority}">${PRIORITY_LABEL[t.priority]}</span>
         ${overdue ? `<span class="badge badge-overdue">⚠ OVERDUE — was due ${esc(friendlyDate(t.due))}</span>`
                   : `<span class="badge badge-date">📅 Due ${esc(friendlyDate(t.due))}</span>`}
+        ${t.time ? `<span class="badge badge-date">⏰ ${formatTime(t.time)}</span>` : ""}
         ${done && opts.showCompletedDate ? `<span class="badge badge-date">✅ Done ${esc(friendlyDate(t.completedAt.slice(0, 10)))}</span>` : ""}
       </div>
       ${t.notes ? `<div class="task-notes">${esc(t.notes)}</div>` : ""}
@@ -374,6 +415,7 @@ function openTaskModal(task, prefillDate) {
   document.getElementById("taskId").value = task ? task.id : "";
   document.getElementById("taskTitle").value = task ? task.title : "";
   document.getElementById("taskDue").value = task ? task.due : (prefillDate || todayStr());
+  document.getElementById("taskTime").value = task ? (task.time || "") : "";
   document.getElementById("taskNotes").value = task ? (task.notes || "") : "";
   setPriorityPicker("taskPriority", task ? task.priority : "high");
   document.getElementById("taskDelete").hidden = !task;
@@ -388,7 +430,7 @@ function openRecModal(rec) {
   document.getElementById("recNotes").value = rec ? (rec.notes || "") : "";
   document.getElementById("recFreq").value = rec ? rec.freq : "weekly";
   document.getElementById("recMonthday").value = rec && rec.monthday ? rec.monthday : 1;
-  setPriorityPicker("recPriority", rec ? rec.priority : "high");
+  setPriorityPicker("recPriority", rec ? rec.priority : "medium");
   const days = rec && rec.weekdays ? rec.weekdays : [];
   document.querySelectorAll("#recWeekdays button").forEach(b =>
     b.classList.toggle("selected", days.includes(Number(b.dataset.day))));
@@ -501,6 +543,7 @@ document.getElementById("taskForm").addEventListener("submit", e => {
     title: document.getElementById("taskTitle").value.trim(),
     priority: getPriorityPicker("taskPriority"),
     due: document.getElementById("taskDue").value,
+    time: document.getElementById("taskTime").value,
     notes: document.getElementById("taskNotes").value.trim(),
   };
   if (!data.title || !data.due) return;
@@ -605,7 +648,7 @@ document.getElementById("importFile").addEventListener("change", e => {
       const data = JSON.parse(reader.result);
       if (!Array.isArray(data.tasks) || !Array.isArray(data.recurring)) throw new Error("bad format");
       if (confirm("Import this backup? It will replace your current tasks.")) {
-        state = { tasks: data.tasks, recurring: data.recurring, recurringDone: data.recurringDone || {} };
+        state = { tasks: data.tasks, recurring: data.recurring, recurringDone: data.recurringDone || {}, seeded: true };
         save(); renderAll();
       }
     } catch {

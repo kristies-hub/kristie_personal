@@ -120,8 +120,11 @@
       <label>Due date
         <input type="date" id="taskDue" required>
       </label>
-      <label>Notes <span class="muted">(optional)</span>
-        <textarea id="taskNotes" rows="2" placeholder="Any details…"></textarea>
+      <label>Time <span class="muted">(optional — only if this task needs a specific hour)</span>
+        <input type="time" id="taskTime">
+      </label>
+      <label>Description <span class="muted">(optional)</span>
+        <textarea id="taskNotes" rows="3" placeholder="Details, links, context, that message you need to remember…"></textarea>
       </label>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" id="taskCancel">Cancel</button>
@@ -173,8 +176,8 @@
           <input type="number" id="recMonthday" min="1" max="31" value="1">
         </label>
       </div>
-      <label>Notes <span class="muted">(optional)</span>
-        <textarea id="recNotes" rows="2" placeholder="Any details…"></textarea>
+      <label>Description <span class="muted">(optional)</span>
+        <textarea id="recNotes" rows="3" placeholder="Details, links, context…"></textarea>
       </label>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" id="recCancel">Cancel</button>
