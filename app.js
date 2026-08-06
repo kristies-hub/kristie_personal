@@ -88,10 +88,19 @@ function load() {
         seeded: !!data.seeded,
         seededV2: !!data.seededV2,
         seededV3: !!data.seededV3,
+        dedupedV1: !!data.dedupedV1,
       };
     }
   } catch (e) { /* fall through to fresh state */ }
-  return { tasks: [], recurring: [], recurringDone: {}, milestones: [], icsUrl: "", seeded: false, seededV2: false, seededV3: false };
+  return { tasks: [], recurring: [], recurringDone: {}, milestones: [], icsUrl: "", seeded: false, seededV2: false, seededV3: false, dedupedV1: false };
+}
+
+/* Fuzzy title key so "Update Peter's sheet" and "Update Peter sheet" (or
+   "Social media post(s)") count as the same task: lowercase, strip
+   punctuation, drop a trailing s from longer words. */
+function normTitle(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]+/g, "").split(/\s+/).filter(Boolean)
+    .map(w => (w.length > 3 && w.endsWith("s")) ? w.slice(0, -1) : w).join(" ");
 }
 
 function addSeedTasks(seeds) {
@@ -125,11 +134,39 @@ function seedIfNeeded() {
     dirty = true;
   }
   if (!state.seededV3) {
-    const existingRec = new Set(state.recurring.map(r => r.title.trim().toLowerCase()));
+    const existingRec = new Set(state.recurring.map(r => normTitle(r.title)));
     SEED_RECURRING.forEach(s => {
-      if (!existingRec.has(s.title.trim().toLowerCase())) state.recurring.push({ id: uid(), ...s });
+      if (!existingRec.has(normTitle(s.title))) state.recurring.push({ id: uid(), ...s });
     });
     state.seededV3 = true;
+    dirty = true;
+  }
+  if (!state.dedupedV1) {
+    // one-time cleanup: pre-loaded recurring tasks that fuzzy-match one Kristie
+    // added herself get removed — her copy (with her days/notes) wins
+    const seedTitles = new Set(SEED_RECURRING.map(s => s.title));
+    const byNorm = {};
+    state.recurring.forEach(r => { const k = normTitle(r.title); (byNorm[k] = byNorm[k] || []).push(r); });
+    const removeIds = new Set();
+    Object.values(byNorm).forEach(group => {
+      if (group.length < 2) return;
+      const seeded = group.filter(r => seedTitles.has(r.title) && !(r.notes || ""));
+      const kept = group.filter(r => !seeded.includes(r));
+      const removed = kept.length ? seeded : group.slice(1);
+      const keeper = kept.length ? kept[0] : group[0];
+      removed.forEach(r => removeIds.add(r.id));
+      // carry over any check-off marks from removed copies
+      const removedIds = new Set(removed.map(r => r.id));
+      Object.keys(state.recurringDone).forEach(key => {
+        const [rid, ds] = key.split("|");
+        if (removedIds.has(rid)) {
+          if (state.recurringDone[key]) state.recurringDone[keeper.id + "|" + ds] = true;
+          delete state.recurringDone[key];
+        }
+      });
+    });
+    state.recurring = state.recurring.filter(r => !removeIds.has(r.id));
+    state.dedupedV1 = true;
     dirty = true;
   }
   if (dirty) save();
@@ -1133,6 +1170,8 @@ document.getElementById("taskForm").addEventListener("submit", e => {
     const t = state.tasks.find(x => x.id === id);
     Object.assign(t, data);
   } else {
+    const dupe = openTasks().find(t => normTitle(t.title) === normTitle(data.title));
+    if (dupe && !confirm(`"${dupe.title}" is already on your list (due ${friendlyDate(dupe.due)}). Add this as a separate task anyway?`)) return;
     state.tasks.push({ id: uid(), ...data, createdAt: new Date().toISOString(), completedAt: null });
   }
   save(); closeModals(); renderAll();
@@ -1170,6 +1209,8 @@ document.getElementById("recForm").addEventListener("submit", e => {
     const r = state.recurring.find(x => x.id === id);
     Object.assign(r, data);
   } else {
+    const dupe = state.recurring.find(r => normTitle(r.title) === normTitle(data.title));
+    if (dupe && !confirm(`"${dupe.title}" already exists as a recurring task (${recWhenLabel(dupe)}). Add this as a separate one anyway?`)) return;
     state.recurring.push({ id: uid(), ...data });
   }
   save(); closeModals(); renderAll();
@@ -1293,7 +1334,7 @@ document.getElementById("importFile").addEventListener("change", e => {
         state = {
           tasks: data.tasks, recurring: data.recurring, recurringDone: data.recurringDone || {},
           milestones: data.milestones || [], icsUrl: data.icsUrl || "",
-          seeded: true, seededV2: true, seededV3: true,
+          seeded: true, seededV2: true, seededV3: true, dedupedV1: true,
         };
         save(); renderAll(); fetchMeetings(true);
       }
