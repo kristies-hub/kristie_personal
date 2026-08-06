@@ -463,6 +463,11 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
 /* ── Timer ───────────────────────────────── */
 .timer-task-name { font-weight: 700; margin: 0 0 12px; color: var(--primary); }
 .timer-custom { margin-top: 12px; }
+#timerPresets .pri-btn.selected {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
 #timerBar {
   position: fixed;
   bottom: 16px;

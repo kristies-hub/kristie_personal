@@ -56,6 +56,18 @@ const SEED_MILESTONES = [
   { title: "Created seller objection handler; revamped Acq and Dispo handbooks into websites" },
 ];
 
+/* Kristie's weekly recurring tasks (all medium priority). Weekdays: 0=Sun…6=Sat */
+const SEED_RECURRING = [
+  { title: "Review team celebrations and meeting cadences", priority: "medium", freq: "weekly", weekdays: [1], monthday: null, notes: "" },
+  { title: "Check all new leads and campaign health", priority: "medium", freq: "weekly", weekdays: [1], monthday: null, notes: "" },
+  { title: "Update marketing sheet data", priority: "medium", freq: "weekly", weekdays: [1], monthday: null, notes: "" },
+  { title: "Social media posts", priority: "medium", freq: "weekly", weekdays: [3], monthday: null, notes: "" },
+  { title: "Review random calls from Acq team", priority: "medium", freq: "weekly", weekdays: [3], monthday: null, notes: "" },
+  { title: "Update Peter sheet", priority: "medium", freq: "weekly", weekdays: [4], monthday: null, notes: "" },
+  { title: "Update Mike Lima sheet", priority: "medium", freq: "weekly", weekdays: [4], monthday: null, notes: "" },
+  { title: "Send and update Xander all contracts and lead updates", priority: "medium", freq: "weekly", weekdays: [5], monthday: null, notes: "" },
+];
+
 let state = load();
 seedIfNeeded();
 let calCursor = startOfMonth(new Date()); // month shown in calendar view
@@ -75,10 +87,11 @@ function load() {
         icsUrl: data.icsUrl || "",
         seeded: !!data.seeded,
         seededV2: !!data.seededV2,
+        seededV3: !!data.seededV3,
       };
     }
   } catch (e) { /* fall through to fresh state */ }
-  return { tasks: [], recurring: [], recurringDone: {}, milestones: [], icsUrl: "", seeded: false, seededV2: false };
+  return { tasks: [], recurring: [], recurringDone: {}, milestones: [], icsUrl: "", seeded: false, seededV2: false, seededV3: false };
 }
 
 function addSeedTasks(seeds) {
@@ -109,6 +122,14 @@ function seedIfNeeded() {
       SEED_MILESTONES.forEach(m => state.milestones.push({ id: uid(), date: "2026-08-06", notes: "", ...m }));
     }
     state.seededV2 = true;
+    dirty = true;
+  }
+  if (!state.seededV3) {
+    const existingRec = new Set(state.recurring.map(r => r.title.trim().toLowerCase()));
+    SEED_RECURRING.forEach(s => {
+      if (!existingRec.has(s.title.trim().toLowerCase())) state.recurring.push({ id: uid(), ...s });
+    });
+    state.seededV3 = true;
     dirty = true;
   }
   if (dirty) save();
@@ -334,11 +355,6 @@ function renderUpcoming() {
 }
 
 /* ── MILESTONES view ─────────────────────── */
-function quarterLabel(ds) {
-  const d = strToDate(ds);
-  return "Q" + (Math.floor(d.getMonth() / 3) + 1) + " " + d.getFullYear();
-}
-
 function renderMilestones() {
   const el = document.getElementById("milestonesList");
   if (!state.milestones.length) {
@@ -346,14 +362,8 @@ function renderMilestones() {
     return;
   }
   const sorted = state.milestones.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  let html = "", lastQ = null;
+  let html = `<div class="group-header">Quarterly Milestones 🏆</div>`;
   for (const m of sorted) {
-    const q = quarterLabel(m.date);
-    if (q !== lastQ) {
-      lastQ = q;
-      const count = sorted.filter(x => quarterLabel(x.date) === q).length;
-      html += `<div class="group-header">${esc(q)} — ${count} win${count === 1 ? "" : "s"} 🏆</div>`;
-    }
     html += `
     <div class="milestone-card">
       <div class="milestone-icon">🌟</div>
@@ -650,19 +660,41 @@ function fmtClock(d) {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
+/* Outlook blocks direct browser fetches (CORS), so when the site is served
+   from Netlify we retry through the /ics-proxy/* redirect (see _redirects),
+   which makes Netlify fetch the calendar server-side. */
+function icsCandidates(url) {
+  const list = [url];
+  try {
+    const u = new URL(url);
+    if (location.protocol === "http:" || location.protocol === "https:") {
+      if (u.hostname === "outlook.office365.com") list.push("/ics-proxy/office365" + u.pathname + u.search);
+      else if (u.hostname === "outlook.live.com") list.push("/ics-proxy/live" + u.pathname + u.search);
+    }
+  } catch { /* not a valid URL — direct attempt will surface the error */ }
+  return list;
+}
+
 async function fetchMeetings(force) {
   if (!state.icsUrl) { icsEvents = []; icsError = null; renderMeetings(); return; }
-  try {
-    const res = await fetch(state.icsUrl, force ? { cache: "reload" } : {});
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const text = await res.text();
-    icsEvents = parseICS(text);
-    icsError = null;
-    icsFetchedAt = new Date();
-    try { localStorage.setItem(ICS_CACHE_KEY, JSON.stringify({ fetchedAt: icsFetchedAt.toISOString(), text })); } catch { /* cache too big — skip */ }
-  } catch (e) {
-    icsError = e.message || "fetch failed";
+  let lastError = null;
+  for (const url of icsCandidates(state.icsUrl)) {
+    try {
+      const res = await fetch(url, force ? { cache: "reload" } : {});
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const text = await res.text();
+      if (!text.includes("BEGIN:VCALENDAR")) throw new Error("not a calendar file");
+      icsEvents = parseICS(text);
+      icsError = null;
+      icsFetchedAt = new Date();
+      try { localStorage.setItem(ICS_CACHE_KEY, JSON.stringify({ fetchedAt: icsFetchedAt.toISOString(), text })); } catch { /* cache too big — skip */ }
+      renderMeetings();
+      return;
+    } catch (e) {
+      lastError = e.message || "fetch failed";
+    }
   }
+  icsError = lastError;
   renderMeetings();
 }
 
@@ -717,22 +749,52 @@ function renderMeetings() {
 
 let timer = null; // {title, endsAt, remainingMs, paused, finished}
 let timerInterval = null;
+let audioCtx = null;
+let alarmTimer = null;
+let alarmCount = 0;
 
-function timerBeep() {
+/* The AudioContext is created on Start (a user gesture) so the browser
+   allows the alarm to actually make sound later. */
+function ensureAudio() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    let t = ctx.currentTime;
-    for (let i = 0; i < 3; i++) {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.001, t);
-      g.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-      o.start(t); o.stop(t + 0.45);
-      t += 0.55;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch { /* audio unavailable */ }
+}
+
+function playAlarmBurst() {
+  if (!audioCtx) return;
+  try {
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    let t = audioCtx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = "square";
+      o.frequency.value = i % 2 ? 660 : 990;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      o.start(t); o.stop(t + 0.3);
+      t += 0.32;
     }
   } catch { /* audio unavailable */ }
+}
+
+function startAlarm() {
+  stopAlarm();
+  playAlarmBurst();
+  alarmCount = 0;
+  // keep ringing every 3s (about 45s total) until dismissed
+  alarmTimer = setInterval(() => {
+    if (++alarmCount >= 15) { stopAlarm(); return; }
+    playAlarmBurst();
+  }, 3000);
+}
+
+function stopAlarm() {
+  clearInterval(alarmTimer);
+  alarmTimer = null;
 }
 
 function openTimerModal(title) {
@@ -744,6 +806,7 @@ function openTimerModal(title) {
 
 function startTimer(title, minutes) {
   timer = { title, endsAt: Date.now() + minutes * 60000, paused: false, finished: false };
+  ensureAudio();
   if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
   clearInterval(timerInterval);
   timerInterval = setInterval(tickTimer, 500);
@@ -753,6 +816,7 @@ function startTimer(title, minutes) {
 function stopTimer() {
   timer = null;
   clearInterval(timerInterval);
+  stopAlarm();
   document.getElementById("timerBar").hidden = true;
   document.title = "Kristie's Task Planner";
 }
@@ -762,7 +826,7 @@ function tickTimer() {
   const remaining = timer.paused ? timer.remainingMs : timer.endsAt - Date.now();
   if (remaining <= 0 && !timer.finished) {
     timer.finished = true;
-    timerBeep();
+    startAlarm();
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("⏰ Time's up!", { body: timer.title });
     }
@@ -941,7 +1005,7 @@ document.body.addEventListener("click", e => {
     tickTimer();
   }
   if (action === "timer-plus5") {
-    if (timer.finished) { timer.finished = false; timer.paused = false; timer.endsAt = Date.now() + 5 * 60000; }
+    if (timer.finished) { timer.finished = false; timer.paused = false; timer.endsAt = Date.now() + 5 * 60000; stopAlarm(); }
     else if (timer.paused) timer.remainingMs += 5 * 60000;
     else timer.endsAt += 5 * 60000;
     tickTimer();
@@ -1143,7 +1207,7 @@ document.getElementById("importFile").addEventListener("change", e => {
         state = {
           tasks: data.tasks, recurring: data.recurring, recurringDone: data.recurringDone || {},
           milestones: data.milestones || [], icsUrl: data.icsUrl || "",
-          seeded: true, seededV2: true,
+          seeded: true, seededV2: true, seededV3: true,
         };
         save(); renderAll(); fetchMeetings(true);
       }

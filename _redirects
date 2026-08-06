@@ -1,0 +1,4 @@
+# Netlify proxy so the browser can fetch Outlook published calendars
+# (Outlook blocks direct browser requests via CORS; Netlify fetches server-side)
+/ics-proxy/office365/*  https://outlook.office365.com/:splat  200
+/ics-proxy/live/*       https://outlook.live.com/:splat       200
