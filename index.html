@@ -17,9 +17,11 @@
     </div>
     <nav class="tabs" id="tabs">
       <button class="tab active" data-view="today">☀️ Today</button>
+      <button class="tab" data-view="upcoming">📆 Upcoming</button>
       <button class="tab" data-view="calendar">📅 Calendar</button>
       <button class="tab" data-view="all">🗂️ All Tasks</button>
       <button class="tab" data-view="recurring">🔁 Recurring</button>
+      <button class="tab" data-view="milestones">🌟 Milestones</button>
       <button class="tab" data-view="done">🏆 Completed</button>
     </nav>
     <div class="topbar-actions">
@@ -36,8 +38,18 @@
       <h1 id="todayGreeting">Good morning, Kristie!</h1>
       <p class="today-date" id="todayDate"></p>
     </div>
+    <div id="meetingsSection"></div>
     <div id="urgentBanner"></div>
     <div id="todaySections"></div>
+  </section>
+
+  <!-- ══════════ UPCOMING VIEW ══════════ -->
+  <section id="view-upcoming" class="view">
+    <div class="view-header">
+      <h2>Upcoming Tasks</h2>
+      <p class="muted">Everything with a future due date, soonest first — so you always know what's coming.</p>
+    </div>
+    <div id="upcomingList"></div>
   </section>
 
   <!-- ══════════ CALENDAR VIEW ══════════ -->
@@ -77,6 +89,16 @@
       <button class="btn btn-primary" id="btnAddRecurring">+ Add Recurring Task</button>
     </div>
     <div id="recurringList"></div>
+  </section>
+
+  <!-- ══════════ MILESTONES VIEW ══════════ -->
+  <section id="view-milestones" class="view">
+    <div class="view-header">
+      <h2>Milestones 🌟</h2>
+      <p class="muted">Your big wins — projects shipped, systems built, strategy moved. Bring this list to your next salary conversation.</p>
+      <button class="btn btn-primary" id="btnAddMilestone">+ Add Milestone</button>
+    </div>
+    <div id="milestonesList"></div>
   </section>
 
   <!-- ══════════ COMPLETED VIEW ══════════ -->
@@ -199,6 +221,78 @@
     </div>
   </div>
 </div>
+
+<!-- ══════════ MILESTONE MODAL ══════════ -->
+<div class="modal-backdrop" id="msModal" hidden>
+  <div class="modal">
+    <h3 id="msModalTitle">Add Milestone</h3>
+    <form id="msForm">
+      <input type="hidden" id="msId">
+      <label>What did you accomplish?
+        <input type="text" id="msTitle" required placeholder="e.g., Built the SMS blast website" autocomplete="off">
+      </label>
+      <label>When
+        <input type="date" id="msDate" required>
+      </label>
+      <label>Description <span class="muted">(optional — impact, numbers, details)</span>
+        <textarea id="msNotes" rows="3" placeholder="What it does, who it helped, results…"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="msCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="msDelete" hidden>Delete</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════ CALENDAR CONNECT MODAL ══════════ -->
+<div class="modal-backdrop" id="calModal" hidden>
+  <div class="modal">
+    <h3>Connect your Outlook calendar</h3>
+    <ol class="cal-steps">
+      <li>Open <strong>Outlook on the web</strong> → click ⚙️ <strong>Settings</strong></li>
+      <li>Go to <strong>Calendar → Shared calendars</strong></li>
+      <li>Under <strong>Publish a calendar</strong>, pick your calendar, choose <strong>"Can view all details"</strong>, and click <strong>Publish</strong></li>
+      <li>Copy the link that ends in <strong>.ics</strong> and paste it below</li>
+    </ol>
+    <form id="calForm">
+      <label>ICS link
+        <input type="url" id="calUrl" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics">
+      </label>
+      <p class="muted">This link is saved only in your browser — it is never uploaded or published anywhere.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="calCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="calDisconnect" hidden>Disconnect</button>
+        <button type="submit" class="btn btn-primary">Save &amp; Load Meetings</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════ POMODORO TIMER MODAL ══════════ -->
+<div class="modal-backdrop" id="timerModal" hidden>
+  <div class="modal">
+    <h3>⏱️ Focus timer</h3>
+    <p class="timer-task-name" id="timerTaskName"></p>
+    <div class="priority-picker" id="timerPresets">
+      <button type="button" class="pri-btn" data-min="15">15 min</button>
+      <button type="button" class="pri-btn selected" data-min="25">25 min 🍅</button>
+      <button type="button" class="pri-btn" data-min="45">45 min</button>
+      <button type="button" class="pri-btn" data-min="60">60 min</button>
+    </div>
+    <label class="timer-custom">Or custom minutes
+      <input type="number" id="timerCustom" min="1" max="240" placeholder="e.g., 20">
+    </label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="timerCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="timerStart">Start Focus</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ FLOATING TIMER BAR ══════════ -->
+<div id="timerBar" hidden></div>
 
 <script src="app.js"></script>
 </body>

@@ -387,6 +387,114 @@ main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
   color: var(--recurring);
 }
 
+/* ── Meetings (Outlook) ──────────────────── */
+.meetings-box { margin-bottom: 18px; }
+.meetings-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.meetings-header h3 { margin: 0; font-size: 1rem; }
+.meetings-tools { font-size: 0.78rem; color: var(--text-soft); display: flex; gap: 10px; align-items: center; margin-left: auto; }
+.meetings-tools button {
+  border: none; background: none; cursor: pointer;
+  color: var(--primary); font-size: 0.78rem; font-weight: 600; padding: 2px 4px;
+}
+.meeting-card {
+  background: #eef4fd;
+  border: 1px solid #c9dcf7;
+  border-left: 5px solid #2b7de9;
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 6px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.meeting-time { font-weight: 700; color: #1d5cb0; white-space: nowrap; font-size: 0.88rem; }
+.meeting-title { font-weight: 600; }
+.meeting-loc { color: var(--text-soft); font-size: 0.82rem; }
+.connect-cal-note {
+  background: var(--surface);
+  border: 1px dashed #c9dcf7;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-size: 0.88rem;
+  color: var(--text-soft);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cal-error {
+  background: var(--medium-bg);
+  border: 1px solid var(--medium-border);
+  color: var(--medium);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.86rem;
+  margin-bottom: 6px;
+}
+.cal-steps { font-size: 0.88rem; padding-left: 20px; margin: 0 0 14px; }
+.cal-steps li { margin-bottom: 6px; }
+
+/* ── Milestones ──────────────────────────── */
+.milestone-card {
+  background: linear-gradient(135deg, #fffdf5, #fdf6e3);
+  border: 1px solid #ecd9a0;
+  border-left: 5px solid #d4a017;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.milestone-icon { font-size: 1.3rem; margin-top: 1px; }
+.milestone-body { flex: 1; min-width: 0; }
+.milestone-title { font-weight: 700; overflow-wrap: anywhere; }
+.milestone-notes { color: var(--text-soft); font-size: 0.86rem; margin-top: 3px; white-space: pre-wrap; }
+
+/* ── Timer ───────────────────────────────── */
+.timer-task-name { font-weight: 700; margin: 0 0 12px; color: var(--primary); }
+.timer-custom { margin-top: 12px; }
+#timerBar {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2437;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 90;
+  max-width: calc(100vw - 32px);
+  font-size: 0.92rem;
+}
+#timerBar[hidden] { display: none; }
+#timerBar .timer-count { font-size: 1.3rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+#timerBar .timer-label {
+  max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 600;
+}
+#timerBar button {
+  border: none; background: rgba(255,255,255,0.15); color: #fff;
+  border-radius: 999px; padding: 5px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+}
+#timerBar button:hover { background: rgba(255,255,255,0.3); }
+#timerBar.timer-done { background: var(--low); }
+#timerBar.timer-done .timer-count { animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.4; } }
+
 /* ── Footer ──────────────────────────────── */
 .footer { border-top: 1px solid var(--border); background: var(--surface); }
 .footer-inner {
