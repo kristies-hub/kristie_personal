@@ -51,6 +51,13 @@
   --status-serious:  #ec835a;
   --status-critical: #d03b3b;
 
+  /* Scorecard cell tints. Chosen so the cell's own text clears 13:1 and so
+     good/critical differ in LIGHTNESS as well as hue — colour is never the
+     only cue (misses also carry a glyph). */
+  --score-good:     #cfe9d4;
+  --score-warning:  #fdeec4;
+  --score-critical: #f9ccd6;
+
   --radius: 14px;
   --radius-sm: 9px;
   --shadow: 0 1px 2px rgba(11, 11, 11, 0.04), 0 8px 24px rgba(11, 11, 11, 0.045);
@@ -92,6 +99,10 @@
     --div-down: #e66767;
     --div-mid:  #383835;
 
+    --score-good:     #1c4a2a;
+    --score-warning:  #4d3d10;
+    --score-critical: #5a222c;
+
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
   }
 }
@@ -129,6 +140,10 @@
   --div-up:   #3987e5;
   --div-down: #e66767;
   --div-mid:  #383835;
+
+  --score-good:     #1c4a2a;
+  --score-warning:  #4d3d10;
+  --score-critical: #5a222c;
 
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
@@ -478,6 +493,134 @@ select:focus-visible, input:focus-visible, textarea:focus-visible {
 .chip[data-status="critical"] { border-color: var(--status-critical); }
 .chip[data-status="neutral"]  { border-color: var(--border-strong); color: var(--text-secondary); }
 
+/* ── Bloom-format weekly scorecard ───────────────────────── */
+.card-flush { padding: 14px 14px 8px; }
+.score-wrap { overflow: auto; max-height: 78vh; }
+
+table.score {
+  border-collapse: separate;
+  border-spacing: 3px;          /* the surface gap, doing the separating */
+  font-size: 12.5px;
+  min-width: 100%;
+}
+table.score caption {
+  caption-side: top;
+  text-align: left;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  padding: 4px 4px 12px;
+}
+
+table.score th,
+table.score td { padding: 0; font-weight: 400; }
+
+/* Frozen left block so KPI / Goal / Sum / Avg stay put while the weeks scroll.
+   The `left` offsets are MEASURED and assigned in leads.js — hard-coding them
+   here made the frozen block overlap the first week column, because the real
+   column widths depend on the text and on border-spacing. */
+.score-head-fixed,
+.score-kpi, .score-goal, .score-agg {
+  position: sticky;
+  background: var(--surface-1);
+  z-index: 2;
+}
+.score-head-fixed, .score-head-week { position: sticky; top: 0; z-index: 3; background: var(--surface-1); }
+.score-head-fixed { z-index: 4; }
+.score-kpi { min-width: 168px; }
+.score-head-fixed:nth-child(1) { min-width: 168px; }
+.score-goal, .score-head-fixed:nth-child(2) { min-width: 58px; }
+.score-agg,  .score-head-fixed:nth-child(3),
+.score-head-fixed:nth-child(4) { min-width: 50px; }
+
+.score-head-fixed,
+.score-head-week {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 4px 8px 10px;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.score-head-fixed:nth-child(1) { text-align: left; }
+.score-head-week {
+  display: table-cell;
+  min-width: 62px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  text-align: center;
+}
+.score-head-week span { display: block; }
+.score-head-week2 { color: var(--text-muted); opacity: 0.72; }
+.score-head-note {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--series-7);
+}
+.score-head-week.is-current { color: var(--text-secondary); }
+
+.score-kpi {
+  text-align: left;
+  padding: 0 14px 0 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.score-goal {
+  text-align: right;
+  padding-right: 14px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.score-agg {
+  text-align: right;
+  padding-right: 14px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The cells. Tint carries goal state; the number is always plain ink so the
+   value never depends on the colour, and misses also carry a glyph. */
+.score-cell {
+  position: relative;
+  height: 34px;
+  min-width: 62px;
+  border-radius: 7px;
+  text-align: center;
+  background: var(--wash);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.score-val { font-size: 13px; }
+.score-flag {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.75;
+  line-height: 1;
+}
+.score-cell[data-status="good"]     { background: var(--score-good); }
+.score-cell[data-status="warning"]  { background: var(--score-warning); }
+.score-cell[data-status="critical"] { background: var(--score-critical); }
+.score-cell.is-current {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.score-cell:hover { outline: 2px solid var(--series-1); outline-offset: -2px; }
+
 /* ── Tooltip ─────────────────────────────────────────────── */
 .tooltip {
   position: fixed;
@@ -536,6 +679,27 @@ select:focus-visible, input:focus-visible, textarea:focus-visible {
 .help.tiny { font-size: 12px; margin: 14px 0 0; }
 .details { margin: 4px 0 18px; }
 .details summary { font-size: 13px; color: var(--series-1); cursor: pointer; margin-bottom: 10px; }
+
+.goal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 10px 14px;
+  margin-bottom: 6px;
+}
+.goal-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.goal-label { font-size: 12.5px; color: var(--text-secondary); }
+.goal-item input {
+  font: inherit;
+  font-size: 13px;
+  width: 78px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ── Footer ──────────────────────────────────────────────── */
 .pagefoot {

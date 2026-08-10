@@ -57,7 +57,22 @@
       <select id="fltWeek"></select>
     </label>
 
+    <label class="field">
+      <span class="field-label">Scorecard weeks</span>
+      <select id="fltScoreWeeks">
+        <option value="8">8 weeks</option>
+        <option value="13" selected>13 weeks</option>
+        <option value="26">26 weeks</option>
+        <option value="52">52 weeks</option>
+      </select>
+    </label>
+
     <div class="filterbar-spacer"></div>
+
+    <label class="switch">
+      <input type="checkbox" id="fltMerge" checked>
+      <span>Merge similar campaign names</span>
+    </label>
 
     <label class="switch">
       <input type="checkbox" id="fltTables">
@@ -88,6 +103,20 @@
     </div>
 
     <div class="kpi-row" id="kpiRow"></div>
+  </section>
+
+  <!-- ══ Bloom-format weekly scorecard ══ -->
+  <section class="section" aria-labelledby="h-score">
+    <div class="section-head">
+      <h2 class="section-title" id="h-score">Weekly scorecard</h2>
+      <p class="section-note">
+        Same layout as the Bloom Growth L10 &mdash; Sunday&ndash;Saturday weeks, newest first, cells
+        tinted against goal. Milestones count in the week they happened, not the week the lead came in.
+      </p>
+    </div>
+    <div class="card card-flush">
+      <div class="score-wrap" id="scorecard"></div>
+    </div>
   </section>
 
   <!-- ══ THE core module: which campaign caused the dip ══ -->
@@ -128,7 +157,7 @@
   <section class="section" aria-labelledby="h-weekly">
     <div class="section-head">
       <h2 class="section-title" id="h-weekly">Weekly leads by campaign</h2>
-      <p class="section-note">Each bar is one whole week (Mon&ndash;Sun), split by campaign &mdash; counted in full even where the date range cuts through it, so no week shows up as a stub.</p>
+      <p class="section-note">Each bar is one whole week (Sun&ndash;Sat, matching Bloom), split by campaign &mdash; counted in full even where the date range cuts through it, so no week shows up as a stub.</p>
     </div>
     <div class="card">
       <div class="chart" id="weeklyChart"></div>
@@ -249,6 +278,12 @@
           <option value="0">Off</option>
         </select>
       </label>
+
+      <details class="details">
+        <summary>Scorecard goals</summary>
+        <p class="help">Your numbers, not mine &mdash; these seed from the Bloom L10 where it showed a goal. Rates are entered as percentages.</p>
+        <div class="goal-grid" id="goalGrid"></div>
+      </details>
 
       <details class="details">
         <summary>Paste CSV manually instead</summary>

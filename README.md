@@ -12,16 +12,21 @@ A simple personal website for prioritizing tasks so nothing urgent slips through
 
 ## 📈 Leads Dashboard (`leads.html`)
 
-A separate, presentation-ready dashboard for marketing leads, live from
-InvestorFuse via Zapier → Google Sheet. Daily lead volume, weekly totals by
-campaign, and a **week-over-week dip analysis** that names which campaign drove
-a drop and what share of it that campaign accounts for. Cost per lead, ROAS,
-funnel conversion and speed-to-lead fill in automatically as those columns
-appear in the sheet.
+A separate, presentation-ready dashboard for marketing leads (dark by default),
+live from InvestorFuse via Zapier → Google Sheet. It has:
+
+- a **weekly scorecard** in the same layout as the Bloom Growth L10 —
+  Sunday–Saturday weeks, newest first, cells tinted against goal
+- a **week-over-week dip analysis** naming which campaign drove a drop and what
+  share of the decline it accounts for
+- daily volume, weekly totals by campaign, campaign leaderboard, funnel
+  conversion, and cost per lead / ROAS as those columns appear in the sheet
+
+Out of the box it reads `leads-history.csv` — the real InvestorFuse export
+(3,301 leads, Jan 2025 – Aug 2026) with all seller PII stripped, so every panel
+works before anything is connected.
 
 Setup is one Zap and one published sheet — see **[LEADS-SETUP.md](LEADS-SETUP.md)**.
-Click **Load sample data** under ⚙ Data source to see it working before
-connecting anything.
 
 ## Where the data lives
 

@@ -60,10 +60,27 @@ function loadCfg() {
     paste: cfg.paste || "",
     refresh: cfg.refresh == null ? 60 : Number(cfg.refresh),
     demo: !!cfg.demo,
-    theme: cfg.theme || "",
+    // Dark is the house style for this dashboard; the toggle still wins.
+    theme: cfg.theme || "dark",
     range: cfg.range || "30",
+    merge: cfg.merge !== false,
+    scoreWeeks: cfg.scoreWeeks || "13",
+    goals: cfg.goals || {},
   };
 }
+
+/* Goals are Kristie's numbers, not defaults I get to invent — these seed the
+   scorecard from the Bloom L10 where it was visible, and every one is editable
+   under ⚙ Data source. */
+function goalFor(m) {
+  const override = state.cfg.goals[m.key];
+  return override == null || override === "" ? m.goal : Number(override);
+}
+
+/* The committed CRM history — 2025-01 through the export date, PII stripped.
+   Used when no live sheet is configured, so the dashboard is never empty and
+   the week-over-week analysis always has history behind it. */
+const SEED_CSV = "leads-history.csv";
 function saveCfg() {
   try {
     localStorage.setItem(CFG_KEY, JSON.stringify(state.cfg));
@@ -114,15 +131,23 @@ const ALIASES = {
   name: ["leadname", "name", "fullname", "sellername", "contactname", "propertyaddress",
          "address"],
   stage: ["stage", "status", "leadstage", "leadstatus", "pipelinestage", "currentstage",
-          "dealstage"],
+          "dealstage", "pipeline"],
   contacted: ["contacted", "firstcontact", "firstcontactat", "firstcontacttime",
               "contactedat", "firstresponse", "firstresponseat", "firstattempt",
-              "firstcontacted", "timetofirstcontact"],
+              "firstcontacted", "timetofirstcontact", "dateoflasttouch"],
+  // InvestorFuse's own export headers are the long "Date of 1st …" forms.
+  qualified: ["qualified", "datequalified", "qualifieddate", "dateofqualification"],
   appointment: ["appointment", "appointmentdate", "appointmentset", "apptdate", "appt",
-                "apptset", "appointmentat"],
-  contract: ["contract", "contractdate", "undercontract", "contractsigned", "contractat"],
-  closing: ["closing", "closingdate", "closed", "closeddate", "closewon", "closedwon",
-            "dealclosed", "settlement", "settlementdate", "funded"],
+                "apptset", "appointmentat", "dateof1stappointment", "dateoffirstappointment",
+                "date1stappointment"],
+  offer: ["offer", "offerdate", "dateof1stoffer", "dateoffirstoffer", "date1stoffer",
+          "offermade", "dateofoffer"],
+  contract: ["contract", "contractdate", "undercontract", "contractsigned", "contractat",
+             "dateofgoingundercontract"],
+  closing: ["closing", "closingdate", "closed", "closeddate", "dateclosed", "closewon",
+            "closedwon", "dealclosed", "settlement", "settlementdate", "funded"],
+  cancelled: ["cancelled", "canceled", "datecancelled", "datecanceled", "fallout",
+              "falloutdate", "cancellationdate"],
   revenue: ["revenue", "profit", "netprofit", "grossprofit", "assignmentfee", "dealvalue",
             "closeamount", "amount"],
   owner: ["owner", "assignedto", "agent", "acquisitionmanager", "assigneduser", "rep"],
@@ -236,9 +261,12 @@ function normaliseLeads(text) {
   const fields = {
     stage: map.stage != null,
     contacted: map.contacted != null,
+    qualified: map.qualified != null,
     appointment: map.appointment != null,
+    offer: map.offer != null,
     contract: map.contract != null,
     closing: map.closing != null,
+    cancelled: map.cancelled != null,
     revenue: map.revenue != null,
     owner: map.owner != null,
     createdHasTime: false,
@@ -258,22 +286,47 @@ function normaliseLeads(text) {
 
     const contactedRaw = cell("contacted");
     const contactedAt = parseDate(contactedRaw);
-    const appt = fields.appointment ? truthy(cell("appointment")) : false;
-    const contract = fields.contract ? truthy(cell("contract")) : false;
-    const closed = fields.closing ? truthy(cell("closing")) : false;
+
+    /* A milestone column may hold a date ("08-11-2026") or just a flag ("yes").
+       Keep both readings: the date drives the weekly scorecard (which counts
+       events in the week they happened), the flag drives the funnel. */
+    const milestone = (key) => {
+      if (!fields[key]) return { on: false, at: null };
+      const raw = cell(key);
+      if (!truthy(raw)) return { on: false, at: null };
+      const d = parseDate(raw);
+      return { on: true, at: d ? d.d : null };
+    };
+    const qualified = milestone("qualified");
+    const appt = milestone("appointment");
+    const offer = milestone("offer");
+    const contract = milestone("contract");
+    const closing = milestone("closing");
+    const cancelled = milestone("cancelled");
 
     rows.push({
       date: created.d,
       day: dayKey(created.d),
       campaign: campaign,
+      rawCampaign: campaign,
       name: cell("name"),
       stage: cell("stage"),
       depth: depth,
-      contacted: (contactedRaw ? truthy(contactedRaw) : false) || (depth != null && depth >= 2),
+      contacted: (contactedRaw ? truthy(contactedRaw) : false) ||
+                 qualified.on || (depth != null && depth >= 2),
       contactedAt: contactedAt ? contactedAt.d : null,
-      appt: appt || (depth != null && depth >= 3),
-      contract: contract || (depth != null && depth >= 4),
-      closed: closed || (depth != null && depth >= 5),
+      qualified: qualified.on,
+      qualifiedAt: qualified.at,
+      appt: appt.on || (depth != null && depth >= 3),
+      apptAt: appt.at,
+      offer: offer.on,
+      offerAt: offer.at,
+      contract: contract.on || (depth != null && depth >= 4),
+      contractAt: contract.at,
+      closed: closing.on || (depth != null && depth >= 5),
+      closedAt: closing.at,
+      cancelled: cancelled.on,
+      cancelledAt: cancelled.at,
       revenue: fields.revenue ? parseNum(cell("revenue")) : null,
       owner: cell("owner"),
     });
@@ -296,10 +349,12 @@ function normaliseSpend(text) {
     const amount = parseNum(cell("spend"));
     if (amount == null) continue;
     const when = parseDate(cell("date"));
+    const camp = cell("campaign") || "(no campaign set)";
     out.push({
       date: when ? when.d : null,
       day: when ? dayKey(when.d) : null,
-      campaign: cell("campaign") || "(no campaign set)",
+      campaign: camp,
+      rawCampaign: camp,
       spend: amount,
     });
   }
@@ -319,25 +374,31 @@ function pad(n) { return n < 10 ? "0" + n : String(n); }
 function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
 
-function mondayOf(d) {
+/* Weeks run SUNDAY → SATURDAY to match the Bloom Growth scorecard. Getting this
+   wrong shifts every weekly number by a day and makes the dashboard disagree
+   with the numbers already on screen in the L10, so it is not a free choice. */
+function weekStartOf(d) {
   const s = startOfDay(d);
-  const dow = s.getDay();                  // 0 = Sun
-  return addDays(s, dow === 0 ? -6 : 1 - dow);
+  return addDays(s, -s.getDay());          // getDay() 0 = Sunday
 }
-function weekKey(d) { return dayKey(mondayOf(d)); }
+function weekKey(d) { return dayKey(weekStartOf(d)); }
 
-/* "Aug W2" — which Monday of its month this week starts on.
-   This matches how the team already talks about weeks. */
-function weekLabel(mondayKey) {
-  const m = parseKey(mondayKey);
+/* "Aug W2" — which Sunday of its month this week starts on. */
+function weekLabel(startKey) {
+  const m = parseKey(startKey);
   const nth = Math.floor((m.getDate() - 1) / 7) + 1;
   return MONTHS[m.getMonth()] + " W" + nth;
 }
-function weekRangeLabel(mondayKey) {
-  const a = parseKey(mondayKey), b = addDays(a, 6);
+function weekRangeLabel(startKey) {
+  const a = parseKey(startKey), b = addDays(a, 6);
   const left = MONTHS[a.getMonth()] + " " + a.getDate();
   const right = (a.getMonth() === b.getMonth() ? "" : MONTHS[b.getMonth()] + " ") + b.getDate();
   return left + "–" + right;
+}
+/* Bloom's own column header: "2 Aug" over "8 Aug". */
+function bloomWeekLines(startKey) {
+  const a = parseKey(startKey), b = addDays(a, 6);
+  return [a.getDate() + " " + MONTHS[a.getMonth()], b.getDate() + " " + MONTHS[b.getMonth()]];
 }
 function parseKey(k) {
   const p = k.split("-");
@@ -411,6 +472,10 @@ async function loadData(isBackground) {
     } else if (state.cfg.paste) {
       text = state.cfg.paste;
       source = "paste";
+    } else {
+      // Fall back to the committed CRM export so the page is useful on first open.
+      text = await fetchCSV(SEED_CSV);
+      source = "seed";
     }
 
     if (!text) {
@@ -440,6 +505,7 @@ async function loadData(isBackground) {
       }
     }
 
+    applyCampaignNames();
     assignHues();
     buildWeekOptions();
     buildCampaignOptions();
@@ -450,6 +516,44 @@ async function loadData(isBackground) {
   } finally {
     main.classList.remove("is-refetching");
   }
+}
+
+/* ── Campaign name hygiene ────────────────────────────────
+   The live CRM export carries the same campaign under several spellings.
+   Left alone they read as one campaign dying and another appearing, which is
+   the exact false alarm this dashboard exists to prevent. Only unambiguous
+   duplicates are merged; anything that might be a genuinely separate spend
+   (Motivated Leads vs Motivated Sellers) is deliberately left apart.
+   Edit this list as campaigns come and go, or untick "Merge similar names". */
+const CAMPAIGN_MERGES = [
+  [/^SEO\s*-?\s*DirectMD(\s*#\s*\d+)?$/i, "SEO DirectMD"],
+  [/^PPC\s*Direct\s*MD\s*Victory$/i, "PPC DirectMD Victory"],
+  [/^Skipforce(\s*Data)?$/i, "Skipforce"],
+  [/^(Old\s*IM|InvestorMachine)$/i, "InvestorMachine"],
+  [/^Old\s*PPC\b.*$/i, "PPC (legacy)"],
+  [/^Website(\s*-\s*.*)?$/i, "Website"],
+];
+
+function canonicalCampaign(name) {
+  const s = String(name || "").trim();
+  if (!s) return "(no campaign set)";
+  for (const [re, canon] of CAMPAIGN_MERGES) if (re.test(s)) return canon;
+  return s;
+}
+
+/* Recomputed whenever the merge toggle changes — no refetch needed. */
+function applyCampaignNames() {
+  const on = state.cfg.merge !== false;
+  const merged = {};
+  state.rows.forEach((r) => {
+    const canon = on ? canonicalCampaign(r.rawCampaign) : r.rawCampaign;
+    if (canon !== r.rawCampaign) merged[r.rawCampaign] = canon;
+    r.campaign = canon;
+  });
+  state.spend.forEach((s) => {
+    s.campaign = on ? canonicalCampaign(s.rawCampaign) : s.rawCampaign;
+  });
+  state.mergedNames = merged;
 }
 
 /* Colour follows the entity: the top 8 campaigns by ALL-TIME volume own
@@ -667,9 +771,245 @@ function classify(r) {
   return { key: "neutral", icon: "—", label: "Flat" };
 }
 
+/* ═══════════════════════════════════════════════════════════
+   5b. Bloom-style weekly scorecard
+   Rows are measures, columns are Sunday–Saturday weeks newest-first,
+   each cell tinted by whether it hit goal — the same shape as the
+   Bloom Growth L10 scorecard, so the numbers can be read side by side.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Each measure says how to count a week and how to judge it.
+   `on` picks WHICH date puts a lead in a week: milestones count in the week
+   they happened, not the week the lead came in. */
+const SCORECARD = [
+  { key: "newLeads", label: "New Leads", goal: 40, cmp: "gte", fmt: "int",
+    on: (r) => r.date },
+  { key: "qualified", label: "Qualified Leads", goal: 20, cmp: "gte", fmt: "int",
+    on: (r) => r.qualifiedAt, needs: "qualified" },
+  { key: "qualRate", label: "Qualified Rate", goal: 0.5, cmp: "gte", fmt: "pct",
+    ratio: ["qualified", "newLeads"], needs: "qualified" },
+  { key: "appts", label: "Appointments Set", goal: 15, cmp: "gte", fmt: "int",
+    on: (r) => r.apptAt, needs: "appointment" },
+  { key: "offers", label: "Offers Made", goal: 10, cmp: "gte", fmt: "int",
+    on: (r) => r.offerAt, needs: "offer" },
+  { key: "sameDay", label: "Same-Day Offers", goal: 4, cmp: "gte", fmt: "int",
+    on: (r) => (r.offerAt && r.day === dayKey(r.offerAt) ? r.offerAt : null), needs: "offer" },
+  { key: "contracts", label: "Contracts Signed", goal: 4, cmp: "gte", fmt: "int",
+    on: (r) => r.contractAt, needs: "contract" },
+  { key: "closed", label: "Deals Closed", goal: 2, cmp: "gte", fmt: "int",
+    on: (r) => r.closedAt, needs: "closing" },
+  { key: "fallOuts", label: "Fall Outs", goal: 0, cmp: "eq", fmt: "int",
+    on: (r) => r.cancelledAt, needs: "cancelled" },
+];
+
+function scorecard(weekCount) {
+  const f = filters();
+  const rows = state.rows.filter((r) =>
+    f.campaign === "__all__" || r.campaign === f.campaign);
+  if (!rows.length) return null;
+
+  // Columns: the most recent `weekCount` weeks up to and including this one,
+  // so the grid keeps a stable shape even in a week with no activity yet.
+  const thisWeek = weekStartOf(new Date());
+  const weeks = [];
+  for (let i = 0; i < weekCount; i++) weeks.push(dayKey(addDays(thisWeek, -7 * i)));
+  const weekSet = {};
+  weeks.forEach((w, i) => { weekSet[w] = i; });
+
+  // One pass per measure, bucketing by whichever date that measure keys on.
+  const counts = {};
+  SCORECARD.forEach((m) => { counts[m.key] = weeks.map(() => 0); });
+  rows.forEach((r) => {
+    SCORECARD.forEach((m) => {
+      if (!m.on) return;
+      const d = m.on(r);
+      if (!d) return;
+      const i = weekSet[weekKey(d)];
+      if (i != null) counts[m.key][i] += 1;
+    });
+  });
+
+  const out = SCORECARD.filter((m) => !m.needs || state.fields[m.needs]).map((m) => {
+    let values;
+    if (m.ratio) {
+      const [num, den] = m.ratio;
+      values = weeks.map((w, i) =>
+        counts[den][i] > 0 ? counts[num][i] / counts[den][i] : null);
+    } else {
+      values = counts[m.key].slice();
+    }
+    // The current week is still running — its cell is shown but not graded,
+    // because a Tuesday total judged against a full-week goal is always a miss.
+    const partialIdx = 0;
+    const graded = values.map((v, i) => (i === partialIdx ? null : judge(m, v)));
+    const real = values.filter((v, i) => v != null && i !== partialIdx);
+    return {
+      measure: m,
+      weeks: weeks,
+      values: values,
+      graded: graded,
+      sum: m.fmt === "pct" ? null : values.reduce((s, v) => s + (v || 0), 0),
+      avg: real.length ? real.reduce((s, v) => s + v, 0) / real.length : null,
+    };
+  });
+
+  return { weeks: weeks, rows: out, thisWeek: dayKey(thisWeek) };
+}
+
+function judge(m, v) {
+  if (v == null) return null;
+  const goal = goalFor(m);
+  if (m.cmp === "eq") return v === goal ? "good" : "critical";
+  return v >= goal ? "good" : (v >= goal * 0.75 ? "warning" : "critical");
+}
+
+function fmtScore(m, v) {
+  if (v == null) return "—";
+  if (m.fmt === "pct") return fmtNum(v * 100, 0) + "%";
+  return fmtInt(v);
+}
+function fmtGoal(m) {
+  const sign = m.cmp === "eq" ? "=" : "≥";
+  const goal = goalFor(m);
+  return sign + " " + (m.fmt === "pct" ? fmtNum(goal * 100, 0) + "%" : fmtInt(goal));
+}
+
+/* The grid. Plain HTML table — it is a table of numbers, and building it as
+   one means the scorecard IS its own accessible representation. */
+function renderScorecard() {
+  const host = document.getElementById("scorecard");
+  const data = scorecard(Number(state.cfg.scoreWeeks) || 13);
+
+  if (!data) {
+    emptyState(host, "No data loaded", "Connect a sheet to fill the scorecard.");
+    return;
+  }
+
+  host.textContent = "";
+  const table = document.createElement("table");
+  table.className = "score";
+
+  const cap = document.createElement("caption");
+  cap.textContent = "Sunday–Saturday weeks, newest first · Sum and Avg cover the weeks shown · " +
+    "the current week is shown but not graded · uses its own week count, " +
+    "not the date range above";
+  table.appendChild(cap);
+
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  ["KPI", "Goal", "Sum", "Avg"].forEach((h) => {
+    const th = document.createElement("th");
+    th.className = "score-head-fixed";
+    th.scope = "col";
+    th.textContent = h;
+    hr.appendChild(th);
+  });
+  data.weeks.forEach((w) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.className = "score-head-week" + (w === data.thisWeek ? " is-current" : "");
+    const lines = bloomWeekLines(w);
+    const a = document.createElement("span");
+    a.textContent = lines[0];
+    const b = document.createElement("span");
+    b.className = "score-head-week2";
+    b.textContent = lines[1];
+    th.appendChild(a);
+    th.appendChild(b);
+    if (w === data.thisWeek) {
+      const c = document.createElement("span");
+      c.className = "score-head-note";
+      c.textContent = "now";        // short, so it never widens the column
+      th.appendChild(c);
+    }
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  data.rows.forEach((row) => {
+    const m = row.measure;
+    const tr = document.createElement("tr");
+
+    const th = document.createElement("th");
+    th.scope = "row";
+    th.className = "score-kpi";
+    th.textContent = m.label;
+    tr.appendChild(th);
+
+    const goal = document.createElement("td");
+    goal.className = "score-goal";
+    goal.textContent = fmtGoal(m);
+    tr.appendChild(goal);
+
+    const sum = document.createElement("td");
+    sum.className = "score-agg";
+    sum.textContent = row.sum == null ? "—" : fmtScore(m, row.sum);
+    tr.appendChild(sum);
+
+    const avg = document.createElement("td");
+    avg.className = "score-agg";
+    avg.textContent = row.avg == null ? "—" : fmtScore(m, row.avg);
+    tr.appendChild(avg);
+
+    row.values.forEach((v, i) => {
+      const td = document.createElement("td");
+      td.className = "score-cell";
+      const status = row.graded[i];
+      if (status) td.dataset.status = status;
+      if (row.weeks[i] === data.thisWeek) td.classList.add("is-current");
+
+      const val = document.createElement("span");
+      val.className = "score-val";
+      val.textContent = fmtScore(m, v);
+      td.appendChild(val);
+
+      // Misses carry a glyph as well as a tint, so the grid never relies on
+      // colour alone. Hits stay bare — marking the exception keeps it readable.
+      if (status === "critical" || status === "warning") {
+        const flag = document.createElement("span");
+        flag.className = "score-flag";
+        flag.textContent = status === "critical" ? "✗" : "!";
+        td.appendChild(flag);
+      }
+
+      td.title = m.label + " · " + weekRangeLabel(row.weeks[i]) + " · " +
+        fmtScore(m, v) + " against a goal of " + fmtGoal(m) +
+        (status ? (status === "good" ? " · on goal" : " · off goal") : " · week still running");
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  host.appendChild(table);
+  freezeLeftColumns(table, 4);
+}
+
+/* Measure the first `n` columns and pin them at the offsets they actually
+   occupy. Guessing these in CSS is what made the frozen block sit on top of
+   the first week column — border-spacing and text width both feed into the
+   real position, so the only reliable source is the rendered table. */
+function freezeLeftColumns(table, n) {
+  const firstRow = table.querySelector("tbody tr");
+  if (!firstRow) return;
+  const tableLeft = table.getBoundingClientRect().left;
+  const offsets = [];
+  for (let i = 0; i < n; i++) {
+    const cell = firstRow.children[i];
+    if (!cell) return;
+    offsets.push(cell.getBoundingClientRect().left - tableLeft);
+  }
+  table.querySelectorAll("tr").forEach((tr) => {
+    for (let i = 0; i < n; i++) {
+      if (tr.children[i]) tr.children[i].style.left = offsets[i] + "px";
+    }
+  });
+}
+
 /* Weekly totals per campaign, for the stacked chart.
 
-   A week is the unit here, so each bar counts its WHOLE Mon–Sun week even
+   A week is the unit here, so each bar counts its WHOLE Sun–Sat week even
    when the date filter cuts through it. Clipping a week to the range would
    draw a 2-lead stub next to a 36-lead week and read as a collapse. */
 function weeklyByCampaign(rows) {
@@ -694,25 +1034,27 @@ function weeklyByCampaign(rows) {
   return { weeks: keys, data: weeks, campaigns: order };
 }
 
+/* Funnel stages, in order, limited to the ones the sheet actually supports.
+   The CHART draws at most 5 — a single-hue ordinal ramp has only five steps
+   that stay both distinguishable and above the contrast floor — so when a 6th
+   stage exists it lives in the table view rather than getting an invented
+   colour. Nothing is lost: the table view is the chart's accessible twin. */
+const FUNNEL_MAX_BARS = 5;
+
 function funnelData(rows) {
   if (!rows.length) return null;
   const has = state.fields;
-  if (!has.stage && !has.appointment && !has.contract && !has.closing && !has.contacted) return null;
 
-  const stages = [
-    { label: "Leads", count: rows.length },
-    { label: "Contacted", count: rows.filter((r) => r.contacted).length },
-    { label: "Appointment", count: rows.filter((r) => r.appt).length },
-    { label: "Contract", count: rows.filter((r) => r.contract).length },
-    { label: "Closed", count: rows.filter((r) => r.closed).length },
-  ];
-  // Drop trailing stages we have no column for at all.
-  const keep = [stages[0]];
-  if (has.contacted || has.stage) keep.push(stages[1]);
-  if (has.appointment || has.stage) keep.push(stages[2]);
-  if (has.contract || has.stage) keep.push(stages[3]);
-  if (has.closing || has.stage) keep.push(stages[4]);
-  return keep;
+  const all = [{ label: "Leads", count: rows.length, always: true }];
+  if (has.qualified) all.push({ label: "Qualified", count: rows.filter((r) => r.qualified).length });
+  else if (has.contacted || has.stage) all.push({ label: "Contacted", count: rows.filter((r) => r.contacted).length });
+  if (has.appointment || has.stage) all.push({ label: "Appointment", count: rows.filter((r) => r.appt).length });
+  if (has.offer) all.push({ label: "Offer made", count: rows.filter((r) => r.offer).length });
+  if (has.contract || has.stage) all.push({ label: "Contract", count: rows.filter((r) => r.contract).length });
+  if (has.closing || has.stage) all.push({ label: "Closed", count: rows.filter((r) => r.closed).length });
+
+  if (all.length < 2) return null;
+  return { all: all, bars: all.slice(0, FUNNEL_MAX_BARS) };
 }
 
 function speedData(rows) {
@@ -1365,7 +1707,7 @@ function renderWeekly(rows) {
       )));
   });
 
-  tableView(tableHost, "Weekly leads by campaign (whole Mon–Sun weeks)",
+  tableView(tableHost, "Weekly leads by campaign (whole Sun–Sat weeks)",
     ["Week"].concat(wk.campaigns, ["Total"]),
     wk.weeks.map((k, i) => [
       weekLabel(k) + " (" + weekRangeLabel(k) + (k === thisWeek ? ", in progress" : "") + ")",
@@ -1430,20 +1772,28 @@ function renderFunnel(rows) {
   const host = document.getElementById("funnelChart");
   const tableHost = document.getElementById("funnelTable");
   const note = document.getElementById("funnelNote");
-  const stages = funnelData(rows);
+  const data = funnelData(rows);
 
-  if (!stages) {
+  if (!data) {
     note.textContent = "";
     emptyState(host, "No funnel columns yet",
-      "Add a Stage, Appointment, Contract or Closing column to the sheet and this fills in automatically.");
+      "Add a Date Qualified, Appointment, Offer, Contract or Closing column to the sheet and this fills in automatically.");
     tableHost.textContent = "";
     return;
   }
 
-  const top = stages[0].count || 1;
-  note.textContent = "Of " + fmtInt(top) + " leads, " +
-    fmtNum((stages[stages.length - 1].count / top) * 100, 1) + "% reached " +
-    stages[stages.length - 1].label.toLowerCase() + ".";
+  const stages = data.bars;
+  const all = data.all;
+  const top = all[0].count || 1;
+  const last = all[all.length - 1];
+  note.textContent = "Of " + fmtInt(top) + " leads created in this range, " +
+    fmtNum((last.count / top) * 100, 1) + "% have reached " + last.label.toLowerCase() +
+    (all.length > stages.length ? ". Later stages are in the data table below." : ".") +
+    // This funnel follows a cohort, so a short range holds leads that simply
+    // have not had time to close yet — worth saying before someone reads a
+    // low closing rate as a performance problem.
+    " These are the same leads followed forward, so a short range shows deals " +
+    "that have not had time to close yet.";
 
   const ramp = ordinalColors();
   host.textContent = "";
@@ -1485,11 +1835,11 @@ function renderFunnel(rows) {
   });
 
   tableView(tableHost, "Funnel conversion", ["Stage", "Leads", "% of leads", "Step conversion"],
-    stages.map((s, i) => [
+    all.map((s, i) => [
       s.label,
       fmtInt(s.count),
       fmtNum((s.count / top) * 100, 1) + "%",
-      i === 0 ? "—" : (stages[i - 1].count > 0 ? fmtNum((s.count / stages[i - 1].count) * 100, 1) + "%" : "—"),
+      i === 0 ? "—" : (all[i - 1].count > 0 ? fmtNum((s.count / all[i - 1].count) * 100, 1) + "%" : "—"),
     ]));
 }
 
@@ -1843,12 +2193,17 @@ function render() {
   renderSpark(document.getElementById("heroSpark"), series.slice(-30), 66);
 
   renderKpis(rows, series, analysis);
+  renderScorecard();
   renderVerdict(analysis);
   renderDip(analysis);
   renderDaily("dailyChart", "dailyTable", series);
   renderWeekly(rows);
 
   const board = countBy(rows, (r) => bucket(r.campaign));
+  // "Other" is a bucket, not a campaign — say what is inside it rather than
+  // leaving a big unexplained bar on a slide.
+  const otherParts = countBy(rows.filter((r) => bucket(r.campaign) === "Other"),
+    (r) => r.campaign);
   const boardRows = Object.keys(board)
     .sort((a, b) => board[b] - board[a] || a.localeCompare(b))
     .map((c) => ({
@@ -1856,7 +2211,11 @@ function render() {
       tip: [
         { color: hueFor(c), value: fmtInt(board[c]), name: "leads" },
         { value: fmtNum((board[c] / Math.max(1, rows.length)) * 100, 1) + "%", name: "of all leads in range" },
-      ],
+      ].concat(c !== "Other" ? [] :
+        Object.keys(otherParts)
+          .sort((a, b) => otherParts[b] - otherParts[a] || a.localeCompare(b))
+          .slice(0, 8)
+          .map((n) => ({ value: fmtInt(otherParts[n]), name: n }))),
     }));
   renderHBars({
     hostId: "boardChart", tableId: "boardTable",
@@ -1877,11 +2236,13 @@ function render() {
     .forEach((id) => { document.getElementById(id).hidden = !f.tables; });
 
   const foot = document.getElementById("footStatus");
+  const mergedCount = Object.keys(state.mergedNames || {}).length;
   foot.textContent = state.rows.length
     ? fmtInt(state.rows.length) + " leads loaded · " +
       state.campaignList.length + " campaigns with a colour" +
       (state.otherCampaigns && state.otherCampaigns.length
-        ? " · " + state.otherCampaigns.length + " folded into “Other”" : "")
+        ? " · " + state.otherCampaigns.length + " folded into “Other”" : "") +
+      (mergedCount ? " · " + mergedCount + " duplicate campaign names merged" : "")
     : "";
 }
 
@@ -1906,6 +2267,17 @@ function renderNotice() {
     n.appendChild(b);
     n.appendChild(document.createTextNode(
       "Open ⚙ Data source to paste your published Google Sheet link, or load the sample data to see how the dashboard reads."));
+    return;
+  }
+  if (state.source === "seed") {
+    n.hidden = false;
+    n.dataset.tone = "warn";
+    const b = document.createElement("strong");
+    b.textContent = "Reading the committed CRM history. ";
+    n.appendChild(b);
+    n.appendChild(document.createTextNode(
+      "These are your real InvestorFuse leads through the export date, so nothing after it is here. " +
+      "Connect the live sheet under ⚙ Data source to keep it current."));
     return;
   }
   if (state.source === "demo") {
@@ -1943,6 +2315,11 @@ function updateLivePill() {
   if (state.source === "paste") {
     pill.dataset.state = "stale";
     txt.textContent = "Pasted CSV (not live)";
+    return;
+  }
+  if (state.source === "seed") {
+    pill.dataset.state = "stale";
+    txt.textContent = "CRM history (not live)";
     return;
   }
   const secs = state.lastFetch ? Math.round((Date.now() - state.lastFetch) / 1000) : null;
@@ -2052,24 +2429,24 @@ function demoCSV() {
   ];
   const owners = ["Xander", "Rigs", "Kristie", "Marco"];
   const today = startOfDay(new Date());
-  const start = addDays(mondayOf(today), -15 * 7);      // ~15 full weeks of history
-  const thisWeekMonday = mondayOf(today);
-  const lastCompleteMonday = addDays(thisWeekMonday, -7);
+  const start = addDays(weekStartOf(today), -15 * 7);      // ~15 full weeks of history
+  const thisWeekStart = weekStartOf(today);
+  const lastCompleteStart = addDays(thisWeekStart, -7);
 
   const lines = ["Date,Campaign,Lead Name,Stage,First Contact,Appointment,Contract,Closing,Revenue,Owner"];
   const first = ["Jordan", "Casey", "Alexis", "Morgan", "Devon", "Riley", "Taylor", "Sydney", "Cameron", "Avery", "Peyton", "Quinn"];
   const last = ["Whitaker", "Blake", "Ramirez", "Okafor", "Nguyen", "Delgado", "Foster", "Hollis", "Marsh", "Byrd"];
 
   for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
-    const monday = mondayOf(d);
-    const isLastComplete = dayKey(monday) === dayKey(lastCompleteMonday);
+    const wkStart = weekStartOf(d);
+    const isLastComplete = dayKey(wkStart) === dayKey(lastCompleteStart);
     const dow = d.getDay();
     // Weekends are quiet, midweek is busy — the shape real lead flow has.
     const dayFactor = dow === 0 ? 0.25 : dow === 6 ? 0.4 : dow === 1 ? 1.2 : 1;
 
     campaigns.forEach((c) => {
       // Slow seasonal drift + the engineered dip in the latest complete week.
-      const weeksAgo = Math.round((thisWeekMonday - monday) / (7 * 86400000));
+      const weeksAgo = Math.round((thisWeekStart - wkStart) / (7 * 86400000));
       const drift = 1 + Math.sin(weeksAgo / 5) * 0.18;
       const dipFactor = isLastComplete ? c.dip : 1;
       const expected = (c.base / 7) * dayFactor * drift * dipFactor;
@@ -2121,7 +2498,7 @@ function demoSpendCSV() {
   };
   const today = startOfDay(new Date());
   const lines = ["Week Of,Campaign,Spend"];
-  for (let m = addDays(mondayOf(today), -15 * 7); m <= today; m = addDays(m, 7)) {
+  for (let m = addDays(weekStartOf(today), -15 * 7); m <= today; m = addDays(m, 7)) {
     for (const name in spend) {
       lines.push([dayKey(m), name, Math.round(spend[name] * 7 * (0.85 + rand() * 0.3))].join(","));
     }
@@ -2149,7 +2526,43 @@ function scheduleRefresh() {
   }, secs * 1000);
 }
 
+function buildGoalInputs() {
+  const grid = document.getElementById("goalGrid");
+  grid.textContent = "";
+  SCORECARD.forEach((m) => {
+    const wrap = document.createElement("label");
+    wrap.className = "goal-item";
+    const lab = document.createElement("span");
+    lab.className = "goal-label";
+    lab.textContent = m.label + (m.fmt === "pct" ? " (%)" : "");
+    const input = document.createElement("input");
+    input.type = "number";
+    input.step = "any";
+    input.min = "0";
+    input.dataset.goalKey = m.key;
+    const g = goalFor(m);
+    input.value = m.fmt === "pct" ? Math.round(g * 100) : g;
+    wrap.appendChild(lab);
+    wrap.appendChild(input);
+    grid.appendChild(wrap);
+  });
+}
+
+function readGoalInputs() {
+  const goals = {};
+  document.querySelectorAll("#goalGrid input[data-goal-key]").forEach((input) => {
+    const key = input.dataset.goalKey;
+    const m = SCORECARD.filter((x) => x.key === key)[0];
+    if (!m || input.value === "") return;
+    const n = Number(input.value);
+    if (!isFinite(n)) return;
+    goals[key] = m.fmt === "pct" ? n / 100 : n;
+  });
+  return goals;
+}
+
 function openSettings() {
+  buildGoalInputs();
   document.getElementById("setSheet").value = state.cfg.sheet;
   document.getElementById("setSpend").value = state.cfg.spend;
   document.getElementById("setRefresh").value = String(state.cfg.refresh);
@@ -2181,6 +2594,7 @@ function init() {
     state.cfg.spend = document.getElementById("setSpend").value.trim();
     state.cfg.refresh = Number(document.getElementById("setRefresh").value);
     state.cfg.paste = document.getElementById("setPaste").value.trim();
+    state.cfg.goals = readGoalInputs();
     if (state.cfg.sheet || state.cfg.paste) state.cfg.demo = false;
     saveCfg();
     closeSettings();
@@ -2218,12 +2632,25 @@ function init() {
     render();                                 // charts re-read their colours from CSS
   });
 
-  ["fltRange", "fltCampaign", "fltWeek", "fltTables"].forEach((id) => {
-    document.getElementById(id).addEventListener("change", () => {
-      if (id === "fltRange") { state.cfg.range = document.getElementById(id).value; saveCfg(); }
-      render();
+  document.getElementById("fltMerge").checked = state.cfg.merge !== false;
+  document.getElementById("fltScoreWeeks").value = String(state.cfg.scoreWeeks);
+
+  ["fltRange", "fltCampaign", "fltWeek", "fltTables", "fltScoreWeeks", "fltMerge"]
+    .forEach((id) => {
+      document.getElementById(id).addEventListener("change", () => {
+        const node = document.getElementById(id);
+        if (id === "fltRange") { state.cfg.range = node.value; saveCfg(); }
+        if (id === "fltScoreWeeks") { state.cfg.scoreWeeks = node.value; saveCfg(); }
+        if (id === "fltMerge") {
+          state.cfg.merge = node.checked;
+          saveCfg();
+          applyCampaignNames();          // renames, then hues, then option lists
+          assignHues();
+          buildCampaignOptions();
+        }
+        render();
+      });
     });
-  });
 
   let resizeTimer = null;
   window.addEventListener("resize", () => {
