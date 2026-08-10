@@ -2,3 +2,11 @@
 # (Outlook blocks direct browser requests via CORS; Netlify fetches server-side)
 /ics-proxy/office365/*  https://outlook.office365.com/:splat  200
 /ics-proxy/live/*       https://outlook.live.com/:splat       200
+
+# Same-origin fallback for the leads dashboard's Google Sheet fetch.
+# Published sheets normally allow direct browser requests; this is the
+# second try when a sheet's sharing settings block CORS.
+/sheet-proxy/*          https://docs.google.com/:splat        200
+
+# Pretty URL for the leads dashboard
+/leads                  /leads.html                           200

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads Dashboard — CROF Maryland</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<link rel="stylesheet" href="leads.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">📈</span>
+      <span class="brand-text">
+        <span class="brand-name">Leads Dashboard</span>
+        <span class="brand-sub">CROF Maryland &middot; live from InvestorFuse</span>
+      </span>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="live-pill" id="livePill" title="Data freshness">
+        <span class="live-dot" id="liveDot" aria-hidden="true"></span>
+        <span class="live-text" id="liveText">Connecting&hellip;</span>
+      </div>
+      <button class="btn btn-ghost" id="btnRefresh" title="Refresh now">&#8635; Refresh</button>
+      <button class="btn btn-ghost" id="btnTheme" title="Toggle light / dark" aria-label="Toggle light or dark theme">&#9789;</button>
+      <button class="btn btn-ghost" id="btnSettings" title="Data source settings">&#9881; Data source</button>
+    </div>
+  </div>
+</header>
+
+<!-- ══ One filter row, scoping everything below it ══ -->
+<div class="filterbar">
+  <div class="filterbar-inner">
+    <label class="field">
+      <span class="field-label">Date range</span>
+      <select id="fltRange">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="mtd">Month to date</option>
+        <option value="all">All time</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Campaign</span>
+      <select id="fltCampaign">
+        <option value="__all__">All campaigns</option>
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Compare week</span>
+      <select id="fltWeek"></select>
+    </label>
+
+    <div class="filterbar-spacer"></div>
+
+    <label class="switch">
+      <input type="checkbox" id="fltTables">
+      <span>Show data tables</span>
+    </label>
+  </div>
+</div>
+
+<main class="wrap" id="main">
+
+  <!-- ══ Banner for empty / demo / error states ══ -->
+  <div class="notice" id="notice" hidden></div>
+
+  <!-- ══ Headline + KPI row ══ -->
+  <section class="section" aria-labelledby="h-pulse">
+    <div class="section-head">
+      <h2 class="section-title" id="h-pulse">Today's pulse</h2>
+      <p class="section-note" id="pulseRange"></p>
+    </div>
+
+    <div class="hero-card card">
+      <div class="hero-figure">
+        <span class="hero-label">Leads today</span>
+        <span class="hero-value" id="heroToday">&mdash;</span>
+        <span class="hero-delta" id="heroDelta"></span>
+      </div>
+      <div class="hero-spark" id="heroSpark" aria-hidden="true"></div>
+    </div>
+
+    <div class="kpi-row" id="kpiRow"></div>
+  </section>
+
+  <!-- ══ THE core module: which campaign caused the dip ══ -->
+  <section class="section" aria-labelledby="h-dip">
+    <div class="section-head">
+      <h2 class="section-title" id="h-dip">Week-over-week campaign dip</h2>
+      <p class="section-note">Which campaigns moved, and how much of the change each one explains.</p>
+    </div>
+
+    <div class="card verdict-card" id="verdictCard">
+      <p class="verdict" id="verdict">&mdash;</p>
+      <p class="verdict-sub" id="verdictSub"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3 class="card-title">Change in leads by campaign</h3>
+        <p class="card-note" id="dipChartNote"></p>
+      </div>
+      <div class="chart" id="dipChart"></div>
+      <div class="table-view" id="dipTable" hidden></div>
+    </div>
+  </section>
+
+  <!-- ══ Daily volume ══ -->
+  <section class="section" aria-labelledby="h-daily">
+    <div class="section-head">
+      <h2 class="section-title" id="h-daily">Daily lead volume</h2>
+      <p class="section-note">Leads created per day, with a 7-day rolling average.</p>
+    </div>
+    <div class="card">
+      <div class="chart" id="dailyChart"></div>
+      <div class="table-view" id="dailyTable" hidden></div>
+    </div>
+  </section>
+
+  <!-- ══ Weekly by campaign ══ -->
+  <section class="section" aria-labelledby="h-weekly">
+    <div class="section-head">
+      <h2 class="section-title" id="h-weekly">Weekly leads by campaign</h2>
+      <p class="section-note">Each bar is one whole week (Mon&ndash;Sun), split by campaign &mdash; counted in full even where the date range cuts through it, so no week shows up as a stub.</p>
+    </div>
+    <div class="card">
+      <div class="chart" id="weeklyChart"></div>
+      <div class="table-view" id="weeklyTable" hidden></div>
+    </div>
+  </section>
+
+  <!-- ══ Campaign leaderboard ══ -->
+  <section class="section" aria-labelledby="h-board">
+    <div class="section-head">
+      <h2 class="section-title" id="h-board">Campaign leaderboard</h2>
+      <p class="section-note">Total leads in the selected range.</p>
+    </div>
+    <div class="card">
+      <div class="chart" id="boardChart"></div>
+      <div class="table-view" id="boardTable" hidden></div>
+    </div>
+  </section>
+
+  <!-- ══ Funnel + speed to lead ══ -->
+  <section class="section" aria-labelledby="h-quality">
+    <div class="section-head">
+      <h2 class="section-title" id="h-quality">Lead quality</h2>
+      <p class="section-note">Conversion through the funnel, and how fast leads get worked.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h3 class="card-title">Funnel conversion</h3>
+          <p class="card-note" id="funnelNote"></p>
+        </div>
+        <div class="chart" id="funnelChart"></div>
+        <div class="table-view" id="funnelTable" hidden></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3 class="card-title">Speed to lead</h3>
+          <p class="card-note" id="speedNote"></p>
+        </div>
+        <div class="chart" id="speedChart"></div>
+        <div class="table-view" id="speedTable" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Spend / CPL / ROAS ══ -->
+  <section class="section" aria-labelledby="h-spend">
+    <div class="section-head">
+      <h2 class="section-title" id="h-spend">Cost &amp; return</h2>
+      <p class="section-note">Cost per lead and return on ad spend by campaign.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h3 class="card-title">Cost per lead</h3>
+          <p class="card-note" id="cplNote"></p>
+        </div>
+        <div class="chart" id="cplChart"></div>
+        <div class="table-view" id="cplTable" hidden></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3 class="card-title">Return on ad spend</h3>
+          <p class="card-note" id="roasNote"></p>
+        </div>
+        <div class="chart" id="roasChart"></div>
+        <div class="table-view" id="roasTable" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="pagefoot">
+    <p id="footStatus"></p>
+    <p class="pagefoot-links">
+      <button class="linkbtn" id="btnExport">Export current view (CSV)</button>
+      <span class="dot-sep">&middot;</span>
+      <a href="index.html">Task Planner</a>
+      <span class="dot-sep">&middot;</span>
+      <a href="LEADS-SETUP.md">Setup guide</a>
+    </p>
+  </footer>
+</main>
+
+<!-- ══ Tooltip (single instance, moved around) ══ -->
+<div class="tooltip" id="tooltip" role="status" aria-live="polite" hidden></div>
+
+<!-- ══ Settings dialog ══ -->
+<div class="modal-back" id="settingsBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="modal-head">
+      <h2 id="setTitle">Data source</h2>
+      <button class="btn btn-ghost" id="btnCloseSettings" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="help">
+        Leads flow <strong>InvestorFuse &rarr; Zapier &rarr; Google Sheet &rarr; this page</strong>.
+        Publish the sheet (<em>File &rarr; Share &rarr; Publish to web &rarr; CSV</em>) and paste the link below.
+        Full steps are in the <a href="LEADS-SETUP.md">setup guide</a>.
+      </p>
+
+      <label class="field field-block">
+        <span class="field-label">Leads sheet &mdash; published CSV link</span>
+        <input type="url" id="setSheet" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=0&amp;single=true&amp;output=csv">
+      </label>
+
+      <label class="field field-block">
+        <span class="field-label">Ad spend sheet &mdash; published CSV link <span class="opt">(optional, powers CPL &amp; ROAS)</span></span>
+        <input type="url" id="setSpend" placeholder="Leave blank until you have a spend sheet">
+      </label>
+
+      <label class="field field-block">
+        <span class="field-label">Auto-refresh</span>
+        <select id="setRefresh">
+          <option value="30">Every 30 seconds</option>
+          <option value="60" selected>Every minute</option>
+          <option value="300">Every 5 minutes</option>
+          <option value="0">Off</option>
+        </select>
+      </label>
+
+      <details class="details">
+        <summary>Paste CSV manually instead</summary>
+        <p class="help">For a one-off InvestorFuse export, or to backfill history. Paste the whole CSV including its header row.</p>
+        <textarea id="setPaste" rows="6" placeholder="Date,Campaign,Lead Name,Stage&#10;2026-08-10,SEO CRMD,Jane Doe,New Lead"></textarea>
+      </details>
+
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btnSaveSettings">Save &amp; reload data</button>
+        <button class="btn btn-ghost" id="btnDemo">Load sample data</button>
+        <button class="btn btn-ghost" id="btnClear">Clear</button>
+      </div>
+
+      <p class="help tiny" id="setDiag"></p>
+    </div>
+  </div>
+</div>
+
+<script src="leads.js"></script>
+</body>
+</html>

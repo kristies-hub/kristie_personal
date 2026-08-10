@@ -10,6 +10,19 @@ A simple personal website for prioritizing tasks so nothing urgent slips through
 - **🔁 Recurring** — repetitive tasks (e.g. "Update Peter's sheet — every Thursday") that automatically appear on the Today page on their scheduled days. Supports daily, weekly (one or more weekdays), and monthly schedules.
 - **🏆 Completed** — everything you've checked off, grouped by date, with "done today / last 7 days / all time" counters for motivation.
 
+## 📈 Leads Dashboard (`leads.html`)
+
+A separate, presentation-ready dashboard for marketing leads, live from
+InvestorFuse via Zapier → Google Sheet. Daily lead volume, weekly totals by
+campaign, and a **week-over-week dip analysis** that names which campaign drove
+a drop and what share of it that campaign accounts for. Cost per lead, ROAS,
+funnel conversion and speed-to-lead fill in automatically as those columns
+appear in the sheet.
+
+Setup is one Zap and one published sheet — see **[LEADS-SETUP.md](LEADS-SETUP.md)**.
+Click **Load sample data** under ⚙ Data source to see it working before
+connecting anything.
+
 ## Where the data lives
 
 All tasks are saved automatically in your browser's local storage — nothing is uploaded anywhere. Use **⬇ Export backup** (bottom of the page) every so often to save a JSON backup file, and **⬆ Import backup** to restore it or move to another browser/computer.
