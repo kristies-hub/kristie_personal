@@ -495,6 +495,38 @@ select:focus-visible, input:focus-visible, textarea:focus-visible {
 
 /* ── Bloom-format weekly scorecard ───────────────────────── */
 .card-flush { padding: 14px 14px 8px; }
+
+/* Collapsed by default — the main dashboard leads the page; this is here for
+   when the L10 numbers are needed. */
+.score-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  padding: 4px 6px;
+}
+.score-summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: var(--radius-sm);
+  list-style: none;
+}
+.score-summary::-webkit-details-marker { display: none; }
+.score-summary::before {
+  content: "▸";
+  position: absolute;
+  margin-left: -14px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.score-block[open] .score-summary::before { content: "▾"; }
+.score-summary:hover { background: var(--wash); }
+.score-summary:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+.score-summary-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.score-summary-note { font-size: 12.5px; color: var(--text-secondary); }
+.score-block-note { padding: 2px 14px 12px; }
 .score-wrap { overflow: auto; max-height: 78vh; }
 
 table.score {

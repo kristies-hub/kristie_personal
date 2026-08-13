@@ -413,9 +413,19 @@ function shortDay(key) {
    4. Loading data
    ═══════════════════════════════════════════════════════════ */
 
-/* Accept whatever link is pasted and turn it into something
-   fetchable: a published-to-web CSV, or an /edit link that we
-   rewrite to the gviz CSV endpoint. */
+/* Accept whatever link is pasted and turn it into something fetchable.
+
+   Google exposes two CSV endpoints with very different freshness, which is the
+   single biggest lever on how "live" this dashboard feels:
+
+     gviz  /spreadsheets/d/<ID>/gviz/tq?tqx=out:csv   — reflects edits in
+             seconds. Needs the sheet shared "Anyone with the link → Viewer".
+     pub   /spreadsheets/d/e/<ID>/pub?output=csv      — Publish-to-web. Simpler
+             sharing, but Google's CDN caches it for around five minutes, so a
+             new lead can sit invisible that long no matter how often we poll.
+
+   So a plain /edit link is rewritten to gviz on purpose — that is the fast
+   path. A pub link is passed through and used as given. */
 function normaliseSheetUrl(url) {
   const u = String(url || "").trim();
   if (!u) return "";
@@ -429,9 +439,16 @@ function normaliseSheetUrl(url) {
   return u;
 }
 
-/* Google serves published CSV with permissive CORS, but a private
-   or oddly-shared sheet can fail. The Netlify redirect in _redirects
-   gives us a same-origin second try. */
+/* True when the configured link is the slow, CDN-cached publish-to-web form. */
+function isSlowSheetUrl(url) {
+  return /\/pub\?|\/pub$|output=csv/i.test(String(url || "")) &&
+         !/tqx=out(:|%3A)csv/i.test(String(url || ""));
+}
+
+/* Google serves both CSV endpoints with permissive CORS, so the direct fetch
+   normally works. A sheet that is neither published nor link-shared will fail,
+   and on GitHub Pages there is no server to proxy around it — /sheet-proxy only
+   exists on Netlify — so say what to fix rather than reporting a raw error. */
 async function fetchCSV(url) {
   const bust = (url.indexOf("?") === -1 ? "?" : "&") + "_cb=" + Date.now();
   try {
@@ -441,9 +458,15 @@ async function fetchCSV(url) {
   } catch (err) {
     const viaProxy = url.replace(/^https:\/\/docs\.google\.com/, "/sheet-proxy");
     if (viaProxy !== url) {
-      const res = await fetch(viaProxy + bust, { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status + " (via proxy)");
-      return await res.text();
+      try {
+        const res = await fetch(viaProxy + bust, { cache: "no-store" });
+        if (res.ok) return await res.text();
+      } catch (e) { /* no proxy on GitHub Pages — fall through to advice */ }
+      throw new Error(
+        "The browser could not read that sheet. Either it is not shared, or the " +
+        "link is not a CSV link. Fix: open the sheet, Share → General access → " +
+        "\"Anyone with the link\" → Viewer, then paste the normal /edit link here."
+      );
     }
     throw err;
   }
@@ -2193,7 +2216,10 @@ function render() {
   renderSpark(document.getElementById("heroSpark"), series.slice(-30), 66);
 
   renderKpis(rows, series, analysis);
-  renderScorecard();
+  // Only build the scorecard when its panel is open: the frozen columns are
+  // positioned from measured widths, and everything measures 0 inside a closed
+  // <details>. It re-renders on open (see the toggle handler in init).
+  if (document.getElementById("scoreBlock").open) renderScorecard();
   renderVerdict(analysis);
   renderDip(analysis);
   renderDaily("dailyChart", "dailyTable", series);
@@ -2568,10 +2594,19 @@ function openSettings() {
   document.getElementById("setRefresh").value = String(state.cfg.refresh);
   document.getElementById("setPaste").value = state.cfg.paste;
   const diag = document.getElementById("setDiag");
-  diag.textContent = state.rows.length
-    ? "Currently loaded: " + fmtInt(state.rows.length) + " leads from " +
-      (state.source === "sheet" ? "the published sheet" : state.source === "demo" ? "sample data" : "pasted CSV") + "."
+  const where = state.source === "sheet" ? "the connected sheet"
+    : state.source === "demo" ? "sample data"
+    : state.source === "seed" ? "the committed CRM history"
+    : "pasted CSV";
+  let msg = state.rows.length
+    ? "Currently loaded: " + fmtInt(state.rows.length) + " leads from " + where + "."
     : "Nothing loaded yet.";
+  if (state.cfg.sheet && isSlowSheetUrl(state.cfg.sheet)) {
+    msg += " That is a Publish-to-web link, so Google caches it for roughly five " +
+      "minutes — polling faster will not help. Swap it for the sheet's /edit link " +
+      "(shared \"Anyone with the link\") to cut the delay to seconds.";
+  }
+  diag.textContent = msg;
   document.getElementById("settingsBack").hidden = false;
 }
 function closeSettings() { document.getElementById("settingsBack").hidden = true; }
@@ -2617,6 +2652,14 @@ function init() {
     closeSettings();
     scheduleRefresh();
     render();
+  });
+
+  const scoreBlock = document.getElementById("scoreBlock");
+  scoreBlock.open = state.cfg.scoreOpen === true;
+  scoreBlock.addEventListener("toggle", () => {
+    state.cfg.scoreOpen = scoreBlock.open;
+    saveCfg();
+    if (scoreBlock.open) renderScorecard();   // measure now that it has a size
   });
 
   document.getElementById("btnRefresh").addEventListener("click", () => loadData(false));

@@ -105,20 +105,6 @@
     <div class="kpi-row" id="kpiRow"></div>
   </section>
 
-  <!-- ══ Bloom-format weekly scorecard ══ -->
-  <section class="section" aria-labelledby="h-score">
-    <div class="section-head">
-      <h2 class="section-title" id="h-score">Weekly scorecard</h2>
-      <p class="section-note">
-        Same layout as the Bloom Growth L10 &mdash; Sunday&ndash;Saturday weeks, newest first, cells
-        tinted against goal. Milestones count in the week they happened, not the week the lead came in.
-      </p>
-    </div>
-    <div class="card card-flush">
-      <div class="score-wrap" id="scorecard"></div>
-    </div>
-  </section>
-
   <!-- ══ THE core module: which campaign caused the dip ══ -->
   <section class="section" aria-labelledby="h-dip">
     <div class="section-head">
@@ -229,6 +215,23 @@
     </div>
   </section>
 
+  <!-- ══ Bloom-format weekly scorecard — kept, but out of the way ══ -->
+  <section class="section" aria-labelledby="h-score">
+    <details class="score-block" id="scoreBlock">
+      <summary class="score-summary">
+        <span class="score-summary-title" id="h-score">Weekly scorecard (Bloom L10 format)</span>
+        <span class="score-summary-note">Sunday&ndash;Saturday weeks against goal &mdash; open when you need the L10 numbers</span>
+      </summary>
+      <p class="section-note score-block-note">
+        Milestones count in the week they happened, not the week the lead came in.
+        Goals are editable under &#9881; Data source.
+      </p>
+      <div class="card card-flush">
+        <div class="score-wrap" id="scorecard"></div>
+      </div>
+    </details>
+  </section>
+
   <footer class="pagefoot">
     <p id="footStatus"></p>
     <p class="pagefoot-links">
@@ -255,13 +258,17 @@
     <div class="modal-body">
       <p class="help">
         Leads flow <strong>InvestorFuse &rarr; Zapier &rarr; Google Sheet &rarr; this page</strong>.
-        Publish the sheet (<em>File &rarr; Share &rarr; Publish to web &rarr; CSV</em>) and paste the link below.
-        Full steps are in the <a href="LEADS-SETUP.md">setup guide</a>.
+        <br>
+        <strong>For the freshest data:</strong> set the sheet to <em>Share &rarr; Anyone with the link
+        &rarr; Viewer</em>, then paste its normal <code>/edit</code> link below &mdash; that route shows
+        new rows within seconds. A <em>Publish&nbsp;to&nbsp;web</em> CSV link also works, but Google
+        caches it for about five minutes. Full steps are in the
+        <a href="LEADS-SETUP.md">setup guide</a>.
       </p>
 
       <label class="field field-block">
-        <span class="field-label">Leads sheet &mdash; published CSV link</span>
-        <input type="url" id="setSheet" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=0&amp;single=true&amp;output=csv">
+        <span class="field-label">Leads sheet &mdash; paste the sheet link</span>
+        <input type="url" id="setSheet" placeholder="https://docs.google.com/spreadsheets/d/1AbC.../edit#gid=0">
       </label>
 
       <label class="field field-block">

@@ -36,8 +36,36 @@ All tasks are saved automatically in your browser's local storage — nothing is
 
 It's a static site — no build step, no dependencies. Open `index.html` in a browser, or serve the folder with GitHub Pages.
 
-### Enabling GitHub Pages
+## Publishing (GitHub Pages)
 
-1. Merge this branch into `main`.
-2. On GitHub: **Settings → Pages → Source: GitHub Actions** (a deploy workflow is included in `.github/workflows/pages.yml`), **or** choose **Deploy from a branch → main → / (root)**.
-3. The site will be live at `https://kristies-hub.github.io/kristie_personal/`.
+The repo deploys itself. `.github/workflows/pages.yml` runs on every push to
+`main`, so **publishing is just merging to `main`** — no build, no CLI, no
+external service.
+
+**First time only:** on GitHub go to **Settings → Pages → Source: GitHub
+Actions**.
+
+**Every time after that:**
+
+1. Merge the pull request into `main`.
+2. Watch the **Actions** tab — the "Deploy to GitHub Pages" run takes about a
+   minute.
+3. Live at:
+   - Task planner — `https://kristies-hub.github.io/kristie_personal/`
+   - Leads dashboard — `https://kristies-hub.github.io/kristie_personal/leads.html`
+
+To redeploy without any code change, use **Actions → Deploy to GitHub Pages →
+Run workflow** (the workflow allows `workflow_dispatch`).
+
+### One thing to know about GitHub Pages
+
+`_redirects` is a **Netlify** file and GitHub Pages ignores it. Two consequences:
+
+- the pretty `/leads` URL does not work — use `/leads.html`
+- `/sheet-proxy/` and `/ics-proxy/` do nothing, so the browser must be able to
+  reach Google and Outlook directly
+
+For the leads dashboard that's fine: Google's CSV endpoints allow direct browser
+requests. The Outlook calendar proxy in the task planner is the one feature that
+needs Netlify. If you ever move the site there, `_redirects` is already correct
+and everything starts working — which is why the file is kept.
