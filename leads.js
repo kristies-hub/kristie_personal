@@ -496,9 +496,15 @@ async function loadData(isBackground) {
       text = state.cfg.paste;
       source = "paste";
     } else {
-      // Fall back to the committed CRM export so the page is useful on first open.
-      text = await fetchCSV(SEED_CSV);
-      source = "seed";
+      /* Optional local history file. It is deliberately NOT committed to a
+         public repo — it holds real lead volumes and campaign performance —
+         so treat "not there" as normal and fall through to the empty state. */
+      try {
+        text = await fetchCSV(SEED_CSV);
+        source = "seed";
+      } catch (e) {
+        text = null;
+      }
     }
 
     if (!text) {

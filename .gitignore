@@ -1,0 +1,5 @@
+# Real lead history — never commit this to a public repository.
+# It carries CR of Maryland's lead volumes, campaign names and close dates.
+# The dashboard treats it as optional: if the file is absent, the page just
+# asks you to connect a data source.
+leads-history.csv
