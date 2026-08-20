@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Referral Leads · CR of Maryland</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23eaa722'/><text x='50' y='69' font-family='Arial Black,Arial,sans-serif' font-size='46' font-weight='900' text-anchor='middle' fill='white'>CR</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cr-red:    #a41f1d;
+    --cr-gold:   #eaa722;
+    --cr-dark:   #212529;
+    --cr-cream:  #f5f4f0;
+    --cr-white:  #ffffff;
+    --cr-border: #e5e2da;
+    --cr-muted:  #6b6b6b;
+  }
+
+  html { scroll-behavior: smooth; }
+  html, body {
+    background: var(--cr-cream);
+    color: var(--cr-dark);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--cr-dark);
+    border-bottom: 4px solid var(--cr-red);
+    padding: 36px 24px 32px;
+    text-align: center;
+  }
+
+  .brand-mark {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cr-gold);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: clamp(34px, 5.5vw, 52px);
+    color: var(--cr-white);
+    line-height: 1.05;
+    letter-spacing: 0.5px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--cr-gold);
+    font-weight: 400;
+  }
+
+  .tagline {
+    color: #b8b8b8;
+    font-size: 14px;
+    margin-top: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── SEARCH BAR ── */
+  .search-wrap {
+    max-width: 640px;
+    margin: -26px auto 0;
+    padding: 0 24px;
+    position: relative;
+    z-index: 5;
+  }
+
+  .search-box {
+    background: var(--cr-white);
+    border: 1px solid var(--cr-border);
+    border-radius: 12px;
+    padding: 6px 6px 6px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 12px 32px rgba(33, 37, 41, 0.09);
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .search-box:focus-within {
+    border-color: var(--cr-red);
+    box-shadow: 0 12px 32px rgba(164, 31, 29, 0.14);
+  }
+
+  .search-box svg { color: var(--cr-muted); flex-shrink: 0; }
+
+  #search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 13px 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--cr-dark);
+    background: transparent;
+  }
+  #search-input::placeholder { color: #aaa; }
+
+  .clear-btn {
+    background: var(--cr-cream);
+    border: none;
+    color: var(--cr-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .clear-btn:hover { background: #ebe8df; }
+  .clear-btn.visible { display: block; }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 52px 24px 80px;
+  }
+
+  .page-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .page-label-bar {
+    width: 4px;
+    height: 28px;
+    background: var(--cr-gold);
+    border-radius: 2px;
+  }
+
+  .page-label-text {
+    font-size: 11px;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--cr-red);
+    font-weight: 600;
+  }
+
+  /* ── STAT STRIP ── */
+  .stats-strip {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+
+  .stat-pill {
+    background: var(--cr-white);
+    border: 1px solid var(--cr-border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--cr-dark);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--cr-muted);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── AGENT GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── AGENT CARD ── */
+  .agent-card {
+    background: var(--cr-white);
+    border: 1px solid var(--cr-border);
+    border-radius: 12px;
+    padding: 24px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .agent-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--cr-red);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.25s ease;
+  }
+
+  .agent-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px rgba(33, 37, 41, 0.08);
+    border-color: #d4cfc2;
+  }
+
+  .agent-card:hover::before { transform: scaleY(1); }
+
+  .agent-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--cr-cream);
+    border: 1px solid var(--cr-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--cr-red);
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  .agent-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--cr-dark);
+    letter-spacing: 0.2px;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  .agent-tag {
+    font-size: 11px;
+    color: var(--cr-muted);
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .agent-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    background: var(--cr-dark);
+    color: var(--cr-white);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    padding: 10px 16px;
+    border-radius: 8px;
+    letter-spacing: 0.3px;
+    transition: background 0.18s, transform 0.15s;
+    margin-top: auto;
+    align-self: flex-start;
+  }
+
+  .agent-link:hover {
+    background: var(--cr-red);
+    transform: translateX(2px);
+  }
+
+  .agent-link svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
+
+  .agent-link:hover svg { transform: translateX(2px); }
+
+  /* ── EMPTY STATE ── */
+  .no-results {
+    text-align: center;
+    padding: 64px 20px;
+    color: var(--cr-muted);
+    display: none;
+    background: var(--cr-white);
+    border: 1px solid var(--cr-border);
+    border-radius: 12px;
+  }
+
+  .no-results.visible { display: block; }
+
+  .no-results h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--cr-dark);
+    margin-bottom: 8px;
+  }
+
+  .no-results p {
+    font-size: 14px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 28px 24px;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #aaa;
+    border-top: 1px solid var(--cr-border);
+  }
+
+  footer span { color: var(--cr-gold); font-weight: 700; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .stats-strip { gap: 12px; }
+    .grid { grid-template-columns: 1fr; }
+    .agent-link { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand-mark">CR of Maryland &nbsp;·&nbsp; Partner Network</div>
+  <h1>Agent <em>Referral</em> Leads</h1>
+  <p class="tagline">Individual lead sheets for each agent partner — one click to their Google Sheet.</p>
+</header>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <div class="search-box">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="search-input" placeholder="Search agent by name…" autocomplete="off">
+    <button class="clear-btn" id="clear-btn">Clear</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- STAT STRIP -->
+  <div class="stats-strip">
+    <div class="stat-pill">
+      <div>
+        <div class="stat-num">7</div>
+        <div class="stat-label">Agent Partners</div>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div>
+        <div class="stat-num">7</div>
+        <div class="stat-label">Active Lead Sheets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT GRID -->
+  <div class="grid" id="agent-grid">
+
+    <div class="agent-card" data-name="paul bittner">
+      <div class="agent-avatar">PB</div>
+      <div class="agent-name">Paul Bittner</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/1nr8H76UIyPDxRika9pXJZrdM7BU-YBWyj81-AxR2YZw/edit?gid=0#gid=0" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <div class="agent-card" data-name="gene dru">
+      <div class="agent-avatar">GD</div>
+      <div class="agent-name">Gene Dru</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/1DVpxi5qtQuUZ-nMtzRnJ22u1nnaSoC8Ov4JViFseJ0U/edit?gid=0#gid=0" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <div class="agent-card" data-name="eric jacobs">
+      <div class="agent-avatar">EJ</div>
+      <div class="agent-name">Eric Jacobs</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/1Me0FvSym3nNIdOLZBpN-i89m6kDeJ8xmqXyTP92DPvg/edit?gid=0#gid=0" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <div class="agent-card" data-name="josh madden">
+      <div class="agent-avatar">JM</div>
+      <div class="agent-name">Josh Madden</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/1b6Jrk5WCpbiIEep_Hv5U9GXDkInK6yjxf54drcE-YmI/edit?gid=0#gid=0" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <div class="agent-card" data-name="blake james">
+      <div class="agent-avatar">BJ</div>
+      <div class="agent-name">Blake James</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/180BYOYzWWdam3OfnbKMppRZVHiOJuTM3HyjIDiTHCOM/edit?gid=0#gid=0" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <div class="agent-card" data-name="teal clise">
+      <div class="agent-avatar">TC</div>
+      <div class="agent-name">Teal Clise</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/1ZJjBzKJXSRb-3lryhFkL5kEBdVmsbWE1d3FIWPgbdpc/edit?usp=sharing" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+    <div class="agent-card" data-name="craig lynch">
+      <div class="agent-avatar">CL</div>
+      <div class="agent-name">Craig Lynch</div>
+      <div class="agent-tag">Agent Partner</div>
+      <a class="agent-link" href="https://docs.google.com/spreadsheets/d/1ZhM5uWAwKNqHnDQhHIiK67zXjiRyGBh92CXJ_EU1I-I/edit?usp=sharing" target="_blank" rel="noopener">
+        Open Lead Sheet
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+
+  </div>
+
+  <div class="no-results" id="no-results">
+    <h3>No agent found</h3>
+    <p>Try a different name, or clear your search to see all agents.</p>
+  </div>
+
+</main>
+
+<footer>
+  <span>CR</span> OF MARYLAND &nbsp;·&nbsp; AGENT REFERRAL LEADS
+</footer>
+
+<script>
+  const input    = document.getElementById('search-input');
+  const clearBtn = document.getElementById('clear-btn');
+  const noRes    = document.getElementById('no-results');
+  const cards    = document.querySelectorAll('.agent-card');
+
+  function filter() {
+    const q = input.value.trim().toLowerCase();
+    clearBtn.classList.toggle('visible', q.length > 0);
+    let visible = 0;
+    cards.forEach(card => {
+      const match = q === '' || card.dataset.name.includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    noRes.classList.toggle('visible', visible === 0 && q.length > 0);
+  }
+
+  input.addEventListener('input', filter);
+  clearBtn.addEventListener('click', () => { input.value = ''; input.focus(); filter(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== input) { e.preventDefault(); input.focus(); }
+    if (e.key === 'Escape' && document.activeElement === input) { input.value = ''; input.blur(); filter(); }
+  });
+</script>
+
+</body>
+</html>

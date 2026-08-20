@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agent Referral Directory · CR of Maryland</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%23eaa722'/><text x='50' y='69' font-family='Arial Black,Arial,sans-serif' font-size='46' font-weight='900' text-anchor='middle' fill='white'>CR</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #f5f4f0;
+    color: #212529;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .header {
+    background: linear-gradient(135deg, #212529 0%, #2d3338 100%);
+    color: #fff;
+    padding: 32px 24px 28px;
+    border-bottom: 4px solid #a41f1d;
+  }
+  .header-inner { max-width: 1100px; margin: 0 auto; }
+  .eyebrow { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .eyebrow-bar { width: 6px; height: 28px; background: #eaa722; }
+  .eyebrow-text {
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #eaa722; font-weight: 600;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 42px; font-weight: 600; margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle { margin: 0; color: #c4c8cc; font-size: 15px; max-width: 720px; }
+
+  /* coverage strip */
+  .strip { display: flex; gap: 28px; margin-top: 22px; flex-wrap: wrap; }
+  .stat-num {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 30px; font-weight: 700; line-height: 1;
+  }
+  .stat-num.warn { color: #eaa722; }
+  .stat-num.bad { color: #e8736f; }
+  .stat-num.good { color: #7ecfa4; }
+  .stat-lbl {
+    font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #9ba1a6; font-weight: 600; margin-top: 5px;
+  }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+  .search-wrap { position: relative; margin-bottom: 16px; }
+  .search-icon {
+    position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+    color: #6c757d; pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 2px solid #e0ddd5;
+    border-radius: 4px;
+    background: #fff;
+    outline: none;
+    transition: border 0.15s;
+  }
+  .search-input:focus { border-color: #a41f1d; }
+  .search-clear {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: #6c757d;
+    padding: 4px; display: none;
+  }
+  .search-clear.visible { display: block; }
+
+  .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .cat-btn {
+    padding: 9px 16px;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    letter-spacing: 0.02em;
+    background: #fff; color: #212529;
+    border: 1.5px solid #e0ddd5;
+    border-radius: 3px; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .cat-btn:hover { border-color: #a41f1d; }
+  .cat-btn.active { background: #212529; color: #eaa722; border-color: #212529; }
+  .cat-count { margin-left: 8px; opacity: 0.7; font-size: 12px; }
+  .controls-note {
+    font-size: 12.5px; color: #6c757d; margin: 0 0 24px;
+  }
+
+  .state-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin: 34px 0 12px; padding-bottom: 8px;
+    border-bottom: 2px solid #212529;
+  }
+  .state-head:first-of-type { margin-top: 8px; }
+  .state-name {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 26px; font-weight: 600;
+  }
+  .state-sub { font-size: 12px; color: #6c757d; letter-spacing: 0.04em; }
+
+  .county-grid { display: flex; flex-direction: column; gap: 8px; }
+
+  .county {
+    background: #fff;
+    border: 1px solid #e0ddd5;
+    border-left-width: 4px;
+    border-radius: 3px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+  }
+  .county.c2 { border-left-color: #2d8659; }
+  .county.c1 { border-left-color: #eaa722; }
+  .county.c0 { border-left-color: #a41f1d; background: #fdfbf7; }
+  .county:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.07); }
+
+  .county-toggle {
+    width: 100%; padding: 15px 20px;
+    background: transparent; border: none;
+    display: flex; align-items: center; gap: 14px;
+    text-align: left; font-family: inherit; cursor: pointer;
+  }
+  .county.c0 .county-toggle { cursor: default; }
+  .tally {
+    width: 34px; height: 34px; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 15px; font-weight: 700;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  .tally.c2 { background: #e6f4ec; color: #1d6642; }
+  .tally.c1 { background: #fef3e8; color: #8a5e0a; }
+  .tally.c0 { background: #fdecec; color: #7a1614; }
+  .county-meta { flex: 1; min-width: 0; }
+  .county-name { font-size: 16px; font-weight: 600; line-height: 1.3; }
+  .county-agents { font-size: 13px; color: #6c757d; line-height: 1.4; margin-top: 2px; }
+  .no-cover {
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700; color: #a41f1d; margin-top: 3px;
+  }
+  .chevron { color: #6c757d; transition: transform 0.2s; flex-shrink: 0; }
+  .county.open .chevron { transform: rotate(180deg); }
+  .county-body { display: none; padding: 0 20px 18px; border-top: 1px solid #f0eee8; }
+  .county.open .county-body { display: block; }
+
+  .agent-row {
+    padding: 16px 0;
+    border-bottom: 1px dashed #ece9e1;
+  }
+  .agent-row:last-child { border-bottom: none; }
+  .agent-line { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 13.5px; font-weight: 700;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    background: #fef3e8; color: #8a5e0a;
+  }
+  .avatar.spec { background: #fdecec; color: #7a1614; }
+  .agent-name { font-size: 15.5px; font-weight: 600; }
+  .agent-note { font-size: 12.5px; color: #6c757d; margin-top: 1px; }
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .contact-item {
+    background: #f5f4f0; border: 1px solid #e0ddd5; border-radius: 3px;
+    padding: 10px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; min-width: 0;
+  }
+  .contact-info { min-width: 0; flex: 1; }
+  .contact-label {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 700; color: #a41f1d; margin-bottom: 2px;
+  }
+  .contact-value { font-size: 13.5px; font-weight: 500; word-break: break-all; }
+  .contact-value a { color: inherit; text-decoration: none; }
+  .contact-value a:hover { color: #a41f1d; }
+  .copy-btn {
+    padding: 6px 9px; font-size: 10px; font-weight: 700; font-family: inherit;
+    background: #212529; color: #eaa722; border: none; border-radius: 3px;
+    cursor: pointer; letter-spacing: 0.06em; flex-shrink: 0;
+  }
+  .copy-btn:hover { background: #2d3338; }
+  .copy-btn.copied { background: #2d8659; color: #fff; }
+
+  .specialty-card {
+    background: #fff; border: 1px solid #e0ddd5; border-left: 4px solid #a41f1d;
+    border-radius: 3px; padding: 4px 20px;
+  }
+  .empty {
+    text-align: center; padding: 50px 20px; color: #6c757d;
+    background: #fff; border-radius: 4px; border: 1px solid #e0ddd5;
+  }
+  .footer {
+    margin-top: 40px; padding-top: 20px; border-top: 1px solid #e0ddd5;
+    font-size: 12px; color: #6c757d; text-align: center;
+  }
+  @media (max-width: 600px) {
+    h1 { font-size: 32px; }
+    .strip { gap: 20px; }
+    .contact-grid { grid-template-columns: 1fr; }
+    .county-toggle { padding: 13px 15px; }
+    .county-body { padding: 0 15px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="eyebrow">
+      <div class="eyebrow-bar"></div>
+      <div class="eyebrow-text">CR of Maryland · Internal</div>
+    </div>
+    <h1>Agent Referral Directory</h1>
+    <p class="subtitle">Referral agents organized by county so coverage gaps are visible at a glance. Red counties have nobody. Search by county, agent, or specialty.</p>
+    <div class="strip" id="strip"></div>
+  </div>
+</div>
+
+<main>
+  <div class="search-wrap">
+    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input type="text" id="searchInput" class="search-input" placeholder="Search county, agent name, or specialty (e.g. Howard, Blake, short sale)..." autocomplete="off" />
+    <button class="search-clear" id="searchClear" aria-label="Clear search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+
+  <div class="controls" id="controls"></div>
+  <p class="controls-note">Counties with zero agents are shown on purpose. Hiding them hides the problem.</p>
+
+  <div id="results"></div>
+  <div class="footer" id="footer"></div>
+</main>
+
+<script>
+// ============ AGENTS ============
+// counties: canonical "County, ST" strings. Statewide specialists use markets: [] and statewide: true.
+const agents = [
+  {
+    id: 'gene-drubetskoy',
+    name: 'Gene Drubetskoy',
+    note: 'Commercial properties',
+    markets: ['Baltimore City, MD', 'Baltimore County, MD'],
+    phone: '410-322-0184',
+    email: 'gene@genedru.com',
+    keywords: ['commercial', 'baltimore']
+  },
+  {
+    id: 'billy-kenny',
+    name: 'Billy Kenny',
+    note: 'Western MD and WV panhandle',
+    markets: ['Frederick County, MD', 'Washington County, MD', 'Berkeley County, WV', 'Jefferson County, WV', 'Morgan County, WV'],
+    phone: '301-707-1678',
+    email: 'billkenny@kw.com',
+    keywords: ['west virginia', 'wv', 'panhandle']
+  },
+  {
+    id: 'mark-bastress',
+    name: 'Mark Bastress',
+    note: 'MD/PA line',
+    markets: ['Baltimore County, MD', 'Carroll County, MD', 'York County, PA', 'Adams County, PA'],
+    phone: '410-259-3291',
+    email: 'markbastress@gmail.com',
+    keywords: ['pennsylvania', 'pa', 'state line']
+  },
+  {
+    id: 'blake-james',
+    name: 'Blake James',
+    note: 'Widest coverage. 8 counties',
+    markets: ['Howard County, MD', 'Harford County, MD', 'Baltimore County, MD', 'Anne Arundel County, MD', 'Carroll County, MD', 'York County, PA', 'Adams County, PA', 'Chester County, PA'],
+    phone: '443-472-1139',
+    email: 'blake@james-group.com',
+    keywords: ['pennsylvania', 'pa']
+  },
+  {
+    id: 'paul-bittner',
+    name: 'Paul Bittner',
+    note: 'Central MD corridor',
+    markets: ['Howard County, MD', 'Montgomery County, MD', 'Frederick County, MD', 'Carroll County, MD'],
+    phone: '410-861-3570',
+    email: 'paulbittner@boblucidoteam.com',
+    keywords: ['central maryland']
+  },
+  {
+    id: 'josh-madden',
+    name: 'Josh Madden',
+    note: 'Novation and creative finance',
+    markets: [],
+    statewide: true,
+    phone: '620-664-7706',
+    email: 'homes@madd-house.com',
+    keywords: ['novation', 'creative finance', 'creative', 'seller finance']
+  },
+  {
+    id: 'aidalina-rodriguez',
+    name: 'Aidalina Rodriguez',
+    note: 'Spanish-speaking sellers',
+    markets: [],
+    statewide: true,
+    phone: '301-312-5675',
+    email: 'aidalina@thekincergroup.com',
+    keywords: ['spanish', 'espanol', 'bilingual', 'latino', 'hispanic']
+  },
+  {
+    id: 'teal-clise',
+    name: 'Teal Clise',
+    note: 'Short sale and pre-foreclosure',
+    markets: [],
+    statewide: true,
+    phone: '443-573-3931',
+    email: 'teal@tealclise.com',
+    keywords: ['short sale', 'shortsale', 'foreclosure', 'distressed', 'pre-foreclosure']
+  }
+];
+
+// ============ GEOGRAPHY ============
+// Full MD jurisdiction list so gaps show up. PA/WV/VA list only what we touch or target.
+const geography = [
+  {
+    state: 'Maryland',
+    sub: 'All 24 jurisdictions',
+    counties: [
+      'Allegany County, MD','Anne Arundel County, MD','Baltimore City, MD','Baltimore County, MD',
+      'Calvert County, MD','Caroline County, MD','Carroll County, MD','Cecil County, MD',
+      'Charles County, MD','Dorchester County, MD','Frederick County, MD','Garrett County, MD',
+      'Harford County, MD','Howard County, MD','Kent County, MD','Montgomery County, MD',
+      "Prince George's County, MD","Queen Anne's County, MD",'Somerset County, MD',
+      "St. Mary's County, MD",'Talbot County, MD','Washington County, MD',
+      'Wicomico County, MD','Worcester County, MD'
+    ]
+  },
+  {
+    state: 'Pennsylvania',
+    sub: 'Where we already have people',
+    counties: ['Adams County, PA','Chester County, PA','York County, PA']
+  },
+  {
+    state: 'West Virginia',
+    sub: 'Eastern panhandle. All Billy',
+    counties: ['Berkeley County, WV','Jefferson County, WV','Morgan County, WV']
+  },
+  {
+    state: 'Virginia',
+    sub: 'Expansion targets. No coverage yet',
+    counties: ['Prince William County, VA','Stafford County, VA','Spotsylvania County, VA','City of Fredericksburg, VA','City of Manassas, VA']
+  }
+];
+
+// ============ INDEX ============
+function agentsFor(county) {
+  return agents.filter(a => a.markets.includes(county));
+}
+const statewide = agents.filter(a => a.statewide);
+
+// ============ STATE ============
+let filter = 'All';
+let searchQuery = '';
+let openCounty = null;
+
+const filters = ['All', 'Covered', 'Gaps'];
+
+// ============ HELPERS ============
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : s;
+  return d.innerHTML;
+}
+function escapeAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function initials(name) {
+  return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+}
+function tier(n) { return n === 0 ? 'c0' : (n === 1 ? 'c1' : 'c2'); }
+
+function countyMatches(county, list, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  if (county.toLowerCase().includes(q)) return true;
+  return list.some(a =>
+    a.name.toLowerCase().includes(q)
+    || (a.note || '').toLowerCase().includes(q)
+    || a.keywords.some(k => k.includes(q))
+    || a.phone.includes(q)
+    || a.email.toLowerCase().includes(q)
+  );
+}
+
+function contactBlock(a) {
+  return `
+    <div class="contact-grid">
+      <div class="contact-item">
+        <div class="contact-info">
+          <div class="contact-label">Phone</div>
+          <div class="contact-value"><a href="tel:${escapeAttr(a.phone)}">${escapeHtml(a.phone)}</a></div>
+        </div>
+        <button class="copy-btn" data-copy="${escapeAttr(a.phone)}">COPY</button>
+      </div>
+      <div class="contact-item">
+        <div class="contact-info">
+          <div class="contact-label">Email</div>
+          <div class="contact-value"><a href="mailto:${escapeAttr(a.email)}">${escapeHtml(a.email)}</a></div>
+        </div>
+        <button class="copy-btn" data-copy="${escapeAttr(a.email)}">COPY</button>
+      </div>
+    </div>`;
+}
+
+function agentRow(a, specClass) {
+  return `
+    <div class="agent-row">
+      <div class="agent-line">
+        <div class="avatar ${specClass || ''}">${escapeHtml(initials(a.name))}</div>
+        <div>
+          <div class="agent-name">${escapeHtml(a.name)}</div>
+          <div class="agent-note">${escapeHtml(a.note || '')}</div>
+        </div>
+      </div>
+      ${contactBlock(a)}
+    </div>`;
+}
+
+// ============ RENDER ============
+function renderStrip() {
+  const md = geography.find(g => g.state === 'Maryland').counties;
+  const covered = md.filter(c => agentsFor(c).length > 0).length;
+  const single = md.filter(c => agentsFor(c).length === 1).length;
+  const none = md.length - covered;
+  document.getElementById('strip').innerHTML = `
+    <div><div class="stat-num good">${covered}</div><div class="stat-lbl">MD counties covered</div></div>
+    <div><div class="stat-num warn">${single}</div><div class="stat-lbl">Single agent only</div></div>
+    <div><div class="stat-num bad">${none}</div><div class="stat-lbl">MD counties with none</div></div>
+    <div><div class="stat-num">${agents.length}</div><div class="stat-lbl">Agents in network</div></div>
+  `;
+}
+
+function renderControls() {
+  const allCounties = geography.flatMap(g => g.counties);
+  const counts = {
+    All: allCounties.length,
+    Covered: allCounties.filter(c => agentsFor(c).length > 0).length,
+    Gaps: allCounties.filter(c => agentsFor(c).length === 0).length
+  };
+  const wrap = document.getElementById('controls');
+  wrap.innerHTML = filters.map(f =>
+    `<button class="cat-btn${filter === f ? ' active' : ''}" data-f="${escapeAttr(f)}">${escapeHtml(f)}<span class="cat-count">${counts[f]}</span></button>`
+  ).join('');
+  wrap.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      filter = btn.dataset.f;
+      renderControls();
+      renderResults();
+    });
+  });
+}
+
+function renderResults() {
+  const container = document.getElementById('results');
+  let shown = 0;
+  let html = '';
+
+  geography.forEach(group => {
+    const rows = group.counties.map(county => {
+      const list = agentsFor(county);
+      return { county, list };
+    }).filter(({ county, list }) => {
+      if (filter === 'Covered' && list.length === 0) return false;
+      if (filter === 'Gaps' && list.length > 0) return false;
+      return countyMatches(county, list, searchQuery);
+    });
+
+    if (!rows.length) return;
+    shown += rows.length;
+
+    html += `
+      <div class="state-head">
+        <div class="state-name">${escapeHtml(group.state)}</div>
+        <div class="state-sub">${escapeHtml(group.sub)}</div>
+      </div>
+      <div class="county-grid">
+        ${rows.map(({ county, list }) => {
+          const t = tier(list.length);
+          const isOpen = openCounty === county;
+          const label = county.replace(/, (MD|PA|WV|VA)$/, '');
+          const names = list.map(a => a.name).join(' · ');
+          return `
+            <div class="county ${t}${isOpen ? ' open' : ''}">
+              <button class="county-toggle" data-county="${escapeAttr(county)}"${list.length ? '' : ' disabled'}>
+                <div class="tally ${t}">${list.length}</div>
+                <div class="county-meta">
+                  <div class="county-name">${escapeHtml(label)}</div>
+                  ${list.length
+                    ? `<div class="county-agents">${escapeHtml(names)}</div>`
+                    : `<div class="no-cover">Need an agent here</div>`}
+                </div>
+                ${list.length ? `<svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>` : ''}
+              </button>
+              ${list.length ? `<div class="county-body">${list.map(a => agentRow(a)).join('')}</div>` : ''}
+            </div>`;
+        }).join('')}
+      </div>`;
+  });
+
+  // Statewide specialists, always relevant regardless of county filter
+  const specMatch = statewide.filter(a => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return a.name.toLowerCase().includes(q)
+      || (a.note || '').toLowerCase().includes(q)
+      || a.keywords.some(k => k.includes(q))
+      || a.phone.includes(q)
+      || a.email.toLowerCase().includes(q);
+  });
+
+  if (filter !== 'Gaps' && specMatch.length) {
+    html += `
+      <div class="state-head">
+        <div class="state-name">Statewide specialists</div>
+        <div class="state-sub">Not county-bound. Loop in by situation, not location</div>
+      </div>
+      <div class="specialty-card">
+        ${specMatch.map(a => agentRow(a, 'spec')).join('')}
+      </div>`;
+  }
+
+  if (!html) {
+    html = '<div class="empty"><p style="margin:0;font-size:15px;">Nothing matches. Try a county name, an agent, or clear the search.</p></div>';
+  }
+
+  container.innerHTML = html;
+  document.getElementById('footer').textContent =
+    `${shown} counties shown · ${agents.length} agents · CR of Maryland Referral Network`;
+
+  container.querySelectorAll('.county-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openCounty = openCounty === btn.dataset.county ? null : btn.dataset.county;
+      renderResults();
+    });
+  });
+
+  container.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'COPIED ✓';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1600);
+      });
+    });
+  });
+}
+
+// ============ SEARCH ============
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+searchInput.addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
+  searchClear.classList.toggle('visible', !!searchQuery);
+  renderResults();
+});
+searchClear.addEventListener('click', () => {
+  searchInput.value = '';
+  searchQuery = '';
+  searchClear.classList.remove('visible');
+  searchInput.focus();
+  renderResults();
+});
+
+renderStrip();
+renderControls();
+renderResults();
+</script>
+
+</body>
+</html>
