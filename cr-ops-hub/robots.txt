@@ -1,3 +1,0 @@
-# Internal site. Keep it out of every search index.
-User-agent: *
-Disallow: /
